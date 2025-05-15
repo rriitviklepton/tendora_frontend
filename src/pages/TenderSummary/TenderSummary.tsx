@@ -290,7 +290,7 @@ const DocumentExplorerModal: React.FC<DocumentExplorerModalProps> = ({
       <div className="bg-white rounded-lg w-full max-w-4xl flex flex-col" style={{ height: '80vh' }}>
         {/* Fixed Header */}
         <div className="flex justify-between items-center p-4 border-b">
-          <h2 className="text-lg font-semibold">Select or Upload Document</h2>
+          <h2 className="text-lg font-semibold">Select Existing Document</h2>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
             <X size={24} />
           </button>
@@ -375,28 +375,7 @@ const DocumentExplorerModal: React.FC<DocumentExplorerModalProps> = ({
         {/* Fixed Footer */}
         <div className="border-t p-4 bg-gray-50 flex justify-between items-center">
           <div className="text-sm text-gray-500">
-            Select an existing document or upload a new one
-          </div>
-          <div className="flex items-center space-x-2">
-            <input
-              type="file"
-              id="modal-file-upload"
-              className="hidden"
-              onChange={onUpload}
-              disabled={uploading}
-              accept=".pdf,.doc,.docx,.xls,.xlsx,.txt"
-            />
-            <label
-              htmlFor="modal-file-upload"
-              className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white ${
-                uploading
-                  ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700 cursor-pointer'
-              } shadow-sm transition-colors`}
-            >
-              <Upload size={16} className="mr-2" />
-              {uploading ? 'Uploading...' : 'Upload New Document'}
-            </label>
+            Click on a document to select it
           </div>
         </div>
       </div>
@@ -1086,17 +1065,27 @@ const TenderSummary = () => {
 
     // Convert comma-separated headers string to array if needed
     const headers = typeof tableData.headers === 'string' 
-      ? tableData.headers.split(',')
+      ? tableData.headers.split(',').map(h => h.trim())
       : tableData.headers;
 
     // Convert comma-separated rows string to array if needed
     const rows = typeof tableData.rows === 'string'
-      ? tableData.rows.split('\n').map(row => row.split(','))
+      ? tableData.rows.split('\n').map(row => row.split(',').map(cell => cell.trim()))
       : tableData.rows;
 
     if (!Array.isArray(headers) || !Array.isArray(rows)) {
       return null;
     }
+
+    // Function to safely convert any value to a string and trim it
+    const formatCell = (cell: any): string => {
+      if (cell === null || cell === undefined) return '-';
+      if (typeof cell === 'string') return cell.trim();
+      if (typeof cell === 'number') return cell.toString();
+      if (typeof cell === 'boolean') return cell.toString();
+      if (typeof cell === 'object') return JSON.stringify(cell);
+      return String(cell);
+    };
 
     return (
       <div className="mt-6">
@@ -1110,7 +1099,7 @@ const TenderSummary = () => {
                     key={index}
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
-                    {header.trim()}
+                    {formatCell(header)}
                   </th>
                 ))}
               </tr>
@@ -1124,7 +1113,7 @@ const TenderSummary = () => {
                         key={cellIndex}
                         className="px-6 py-4 whitespace-pre-wrap text-sm text-gray-500"
                       >
-                        {cell?.trim() || '-'}
+                        {formatCell(cell)}
                       </td>
                     ))
                   ) : (
@@ -1133,7 +1122,7 @@ const TenderSummary = () => {
                         key={cellIndex}
                         className="px-6 py-4 whitespace-pre-wrap text-sm text-gray-500"
                       >
-                        {(row[header] || '').trim() || '-'}
+                        {formatCell(row[header])}
                       </td>
                     ))
                   )}
@@ -1370,58 +1359,99 @@ const TenderSummary = () => {
   const availableTabs = TABS;
   const visibleTabs = availableTabs.slice(visibleTabsStart, visibleTabsStart + 5);
 
-  // Update the renderContentSection function with proper type for item
+  // Update the renderContentSection function to handle all cases and ensure contentItems is always defined before use
   const renderContentSection = (data: any) => {
     if (!data || typeof data !== 'object') {
       return null;
     }
-    
-    // If data has processed_section
+
+    // Handle processed_section wrapper if present
     if (data.processed_section) {
       return renderContentSection(data.processed_section);
     }
 
-    // Special handling for evaluation criteria
-    if (data.evaluationStages || data.technicalEvaluation) {
+    // If data is an array of content items (most sections follow this format)
+    if (Array.isArray(data)) {
+      return data.map((item: any, index: number) => {
+        if (!item) return null;
+
+        // Handle table data if present
+        if (item.formatHint === 'table_block' && item.tableData) {
+          return (
+            <div key={index} className="mb-6">
+              {renderTableData(item.tableData)}
+            </div>
+          );
+        }
+
+        // Handle text content
+        if (item.itemText) {
+          return (
+            <div key={index} className="mb-4">
+              <div className="flex items-start">
+                {item.formatHint === 'list_item' && (
+                  <div className="flex-shrink-0 h-2 w-2 rounded-full bg-blue-600 mt-2 mr-3"></div>
+                )}
+                <p className="text-sm text-gray-600 whitespace-pre-wrap">{item.itemText}</p>
+              </div>
+            </div>
+          );
+        }
+
+        // Handle evaluation criteria specific format
+        if (item.criteriaParameter) {
+          return (
+            <div key={index} className="mb-4 p-4 border border-gray-200 rounded-lg">
+              <h4 className="font-medium text-gray-900 mb-2">{item.criteriaParameter}</h4>
+              {item.maxMarksWeightage && (
+                <div className="text-sm text-gray-600 mb-2">
+                  <span className="font-medium">Weightage:</span> {item.maxMarksWeightage}
+                </div>
+              )}
+              {item.subCriteriaNotes && (
+                <p className="text-sm text-gray-600 whitespace-pre-wrap">{item.subCriteriaNotes}</p>
+              )}
+            </div>
+          );
+        }
+
+        return null;
+      });
+    }
+
+    // Handle evaluation criteria section specific structure
+    if (data.technicalEvaluation || data.minimumTechnicalScore || data.financialEvaluation) {
       return (
         <div className="space-y-6">
           {data.evaluationStages && (
             <div className="mb-6">
-              <h4 className="text-sm font-medium text-gray-700 mb-2">Evaluation Stages</h4>
-              <p className="text-sm text-gray-600">{data.evaluationStages}</p>
+              <h4 className="text-sm font-medium text-gray-900 mb-2">Evaluation Stages</h4>
+              <p className="text-sm text-gray-600 whitespace-pre-wrap">{data.evaluationStages}</p>
             </div>
           )}
-
+          
           {data.eligibilityQualifyingCriteria && (
             <div className="mb-6">
-              <h4 className="text-sm font-medium text-gray-700 mb-2">Eligibility & Qualifying Criteria</h4>
+              <h4 className="text-sm font-medium text-gray-900 mb-2">Eligibility & Qualifying Criteria</h4>
               <p className="text-sm text-gray-600 whitespace-pre-wrap">{data.eligibilityQualifyingCriteria}</p>
             </div>
           )}
 
-          {data.technicalEvaluation && Array.isArray(data.technicalEvaluation) && data.technicalEvaluation.length > 0 && (
+          {Array.isArray(data.technicalEvaluation) && data.technicalEvaluation.length > 0 && (
             <div className="mb-6">
-              <h4 className="text-sm font-medium text-gray-700 mb-3">Technical Evaluation Criteria</h4>
+              <h4 className="text-sm font-medium text-gray-900 mb-3">Technical Evaluation Criteria</h4>
               <div className="space-y-4">
                 {data.technicalEvaluation.map((criteria: any, index: number) => (
-                  <div key={index} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                    <div className="px-6 py-4">
-                      <div className="flex items-start justify-between mb-4">
-                        <h5 className="text-base font-medium text-gray-900 flex-grow pr-4">
-                          {criteria.criteriaParameter}
-                        </h5>
-                        <div className="flex-shrink-0 bg-blue-50 px-3 py-1 rounded-full">
-                          <span className="text-sm font-medium text-blue-700">
-                            Max Marks: {criteria.maxMarksWeightage}
-                          </span>
-                        </div>
+                  <div key={index} className="p-4 border border-gray-200 rounded-lg">
+                    <h5 className="font-medium text-gray-900 mb-2">{criteria.criteriaParameter}</h5>
+                    {criteria.maxMarksWeightage && (
+                      <div className="text-sm text-gray-600 mb-2">
+                        <span className="font-medium">Weightage:</span> {criteria.maxMarksWeightage}
                       </div>
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <p className="text-sm text-gray-600 whitespace-pre-wrap">
-                          {criteria.subCriteriaNotes}
-                        </p>
-                      </div>
-                    </div>
+                    )}
+                    {criteria.subCriteriaNotes && (
+                      <p className="text-sm text-gray-600 whitespace-pre-wrap">{criteria.subCriteriaNotes}</p>
+                    )}
                   </div>
                 ))}
               </div>
@@ -1429,80 +1459,61 @@ const TenderSummary = () => {
           )}
 
           {data.minimumTechnicalScore && (
-            <div className="mb-6 bg-yellow-50 border border-yellow-100 rounded-lg p-4">
-              <h4 className="text-sm font-medium text-yellow-800 mb-2">Minimum Technical Score Required</h4>
-              <p className="text-sm text-yellow-700">{data.minimumTechnicalScore}</p>
+            <div className="mb-6">
+              <h4 className="text-sm font-medium text-gray-900 mb-2">Minimum Technical Score Required</h4>
+              <p className="text-sm text-gray-600">{data.minimumTechnicalScore}</p>
             </div>
           )}
 
           {data.financialEvaluation && (
             <div className="mb-6">
-              <h4 className="text-sm font-medium text-gray-700 mb-2">Financial Evaluation</h4>
-              <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-sm text-gray-600 whitespace-pre-wrap">{data.financialEvaluation}</p>
-              </div>
+              <h4 className="text-sm font-medium text-gray-900 mb-2">Financial Evaluation</h4>
+              <p className="text-sm text-gray-600 whitespace-pre-wrap">{data.financialEvaluation}</p>
             </div>
           )}
 
           {data.overallSelectionMethod && (
             <div className="mb-6">
-              <h4 className="text-sm font-medium text-gray-700 mb-2">Overall Selection Method</h4>
-              <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-sm text-gray-600 whitespace-pre-wrap">{data.overallSelectionMethod}</p>
-              </div>
+              <h4 className="text-sm font-medium text-gray-900 mb-2">Overall Selection Method</h4>
+              <p className="text-sm text-gray-600 whitespace-pre-wrap">{data.overallSelectionMethod}</p>
             </div>
           )}
         </div>
       );
     }
 
-    // If data is an array, map through it
-    if (Array.isArray(data)) {
-      return data.map((item: any, index: number) => {
-        if (!item) return null;
+    // Handle scope of work specific structure
+    if (data.contentType) {
+      const contentItems = [];
+      
+      // Add description if present
+      if (data.description) {
+        contentItems.push({
+          itemText: data.description,
+          formatHint: 'text'
+        });
+      }
 
-        if (item.formatHint === 'table_block' && item.tableData) {
-          return renderTableData(item.tableData);
-        }
+      // Add list items if present
+      if (data.listItems && Array.isArray(data.listItems)) {
+        contentItems.push(...data.listItems.map((item: string) => ({
+          itemText: item,
+          formatHint: 'list_item'
+        })));
+      }
 
-        if (!item.itemText) {
-          return null;
-        }
+      // Add table data if present
+      if (data.contentType === 'table' && data.tableData) {
+        contentItems.push({
+          formatHint: 'table_block',
+          tableData: data.tableData
+        });
+      }
 
-        return (
-          <div key={index} className="mb-4">
-            <div className="flex items-start">
-              {item.formatHint === 'list_item' && (
-                <div className="flex-shrink-0 h-2 w-2 rounded-full bg-blue-600 mt-2 mr-3"></div>
-              )}
-              <p className="text-sm text-gray-600">{item.itemText}</p>
-            </div>
-          </div>
-        );
-      });
+      return renderContentSection(contentItems);
     }
 
-    // Handle direct object with content
-    const contentItems = [];
-    if (data.description) {
-      contentItems.push({
-        itemText: data.description,
-        formatHint: 'text'
-      });
-    }
-    if (data.listItems && Array.isArray(data.listItems)) {
-      contentItems.push(...data.listItems.map((item: string) => ({
-        itemText: item,
-        formatHint: 'list_item'
-      })));
-    }
-    if (data.tableData) {
-      contentItems.push({
-        formatHint: 'table_block',
-        tableData: data.tableData
-      });
-    }
-    return renderContentSection(contentItems);
+    return null;
   };
 
   // Update the section render functions
@@ -1631,28 +1642,12 @@ const TenderSummary = () => {
     
     return (
       <div className="space-y-6">
-        <h3 className="text-lg font-medium text-gray-900">Submission Requirements</h3>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Document</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Purpose</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Format Instructions</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Submission Note</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {annexuresQuery.data.processed_section.map((doc: DocumentRow, index: number) => renderDocumentRow(doc, index))}
-            </tbody>
-          </table>
-        </div>
-        {annexuresQuery.data.processed_section.length > 0 && (
-          <div className="mt-4 flex justify-end">
-            <button
-              onClick={handleBulkAIRecommendations}
+        <div className="flex justify-between items-center">
+          <h3 className="text-lg font-medium text-gray-900">Submission Requirements</h3>
+          {annexuresQuery.data.processed_section.length > 0 && (
+            <div className="flex justify-end">
+              <button
+                onClick={handleBulkAIRecommendations}
               disabled={bulkLoading}
               className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white ${
                 bulkLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-700'
@@ -1672,6 +1667,25 @@ const TenderSummary = () => {
             </button>
           </div>
         )}
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Document</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Purpose</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Format Instructions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Submission Note</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {annexuresQuery.data.processed_section.map((doc: DocumentRow, index: number) => renderDocumentRow(doc, index))}
+            </tbody>
+          </table>
+        </div>
+        
       </div>
     );
   };
@@ -1716,31 +1730,69 @@ const TenderSummary = () => {
           </div>
         ) : (
           <div className="flex items-center space-x-2">
+            {/* Select Existing Document */}
             <button
               onClick={() => setModalOpen(index)}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              title="Select existing document"
             >
-              <Upload size={16} className="" />
+              <File size={16} className="mr-1" />
+              Select
             </button>
 
+            {/* Upload New Document */}
+            <div className="relative">
+              <input
+                type="file"
+                id={`file-upload-${index}`}
+                className="hidden"
+                onChange={(e) => handleFileUpload(e, index)}
+                disabled={uploading !== null}
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.txt"
+              />
+              <label
+                htmlFor={`file-upload-${index}`}
+                className={`inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium ${
+                  uploading === index
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'text-gray-700 bg-white hover:bg-gray-50 cursor-pointer'
+                }`}
+                title="Upload new document"
+              >
+                {uploading === index ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-500 border-t-transparent mr-1" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Upload size={16} className="mr-1" />
+                    Upload
+                  </>
+                )}
+              </label>
+            </div>
+
+            {/* AI Suggestion */}
             <button
               onClick={() => handleGetAIRecommendation(index)}
               disabled={loadingRecommendation !== null || uploading !== null}
-              className={`inline-flex items-center justify-center w-10 h-10 border border-transparent text-sm font-medium rounded-md text-white ${
+              className={`inline-flex items-center px-3 py-2 border border-transparent rounded-md text-sm font-medium ${
                 loadingRecommendation !== null || uploading !== null
-                  ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-purple-600 hover:bg-purple-700 cursor-pointer'
-              } shadow-sm transition-colors group relative`}
+                  ? 'bg-gray-400 text-white cursor-not-allowed'
+                  : 'bg-purple-600 text-white hover:bg-purple-700'
+              }`}
               title="Get AI recommendation"
             >
               {loadingRecommendation === index ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent" />
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-1" />
+                  Analyzing...
+                </>
               ) : (
                 <>
-                  <Info size={16} />
-                  <div className="absolute bottom-full mb-2 hidden group-hover:block bg-gray-900 text-white text-xs rounded px-2 py-1 whitespace-nowrap">
-                    Get AI recommendation
-                  </div>
+                  <Info size={16} className="mr-1" />
+                  Suggest
                 </>
               )}
             </button>

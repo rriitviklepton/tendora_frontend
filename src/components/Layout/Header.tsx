@@ -19,7 +19,7 @@ const Header = ({ toggleSidebar, toggleAssistant }: HeaderProps) => {
           >
             <Menu size={24} />
           </button>
-          <h1 className="ml-2 text-xl font-semibold text-gray-800">SmartTendor</h1>
+          <h1 className="ml-2 text-xl font-semibold text-gray-800">SmartTender</h1>
         </div>
 
         {/* Right side */}

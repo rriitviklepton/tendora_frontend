@@ -38,7 +38,7 @@ const Sidebar = ({ open, setOpen }: SidebarProps) => {
         {/* Header and close button */}
         <div className="flex items-center justify-between h-16 px-4 bg-blue-800">
           <div className="flex items-center">
-            <span className="text-xl font-bold text-white">SmartTendor</span>
+            <span className="text-xl font-bold text-white">SmartTender</span>
           </div>
           <button
             type="button"
