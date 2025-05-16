@@ -644,21 +644,7 @@ const isSectionAccessible = (
   if (!sectionStatus?.sections) return false;
   
   const section = sectionStatus.sections[sectionApiMapping[sectionId]];
-  
-  // If it's tender summary or scope of work, they need to be in success state
-  if (sectionId === 'tender_summary' || sectionId === 'scope') {
-    return section?.status === 'success';
-  }
-  
-  // For other sections, they're accessible if:
-  // 1. Tender summary and scope are successful
-  // 2. This section is either successful or not yet started
-  const tenderSummaryOk = sectionStatus.sections['tender_summary']?.status === 'success';
-  const scopeOk = sectionStatus.sections['scope_of_work']?.status === 'success';
-  
-  if (!tenderSummaryOk || !scopeOk) return false;
-  
-  return section?.status === 'success' || !section?.status;
+  return section?.status === 'success';
 };
 
 // Add helper function to get section state
@@ -936,48 +922,17 @@ const TenderSummary = () => {
     fetchSectionStatus();
   }, [id]);
 
-  // Update checkAllSectionsFailed to only check tender summary and scope of work
+  // Update checkAllSectionsFailed to use sectionStatus
   const checkAllSectionsFailed = () => {
     if (!sectionStatus?.sections) return false;
     
-    const tenderSummarySection = sectionStatus.sections['tender_summary'];
-    const scopeSection = sectionStatus.sections['scope_of_work'];
+    // Check if any sections are still analyzing or not started
+    const hasUnfinishedSections = Object.values(sectionStatus.sections).some(
+      (section: any) => section.status === 'analyzing' || section.status === null
+    );
 
-    // Show analyzing UI only if tender summary or scope of work is analyzing
-    const isAnalyzing = 
-      tenderSummarySection?.status === 'analyzing' || 
-      scopeSection?.status === 'analyzing';
-
-    // If either section is not started, show analyzing UI
-    const notStarted = 
-      !tenderSummarySection?.status || 
-      !scopeSection?.status;
-
-    return isAnalyzing || notStarted;
-  };
-
-  // Update the tab visibility logic
-  const getVisibleTabs = () => {
-    // Always show all tabs
-    const allTabs = [...TABS];
-    
-    // Calculate how many tabs to show based on current view
-    return allTabs.slice(visibleTabsStart, visibleTabsStart + 5);
-  };
-
-  // Update handleNextTabs to use the new getVisibleTabs function
-  const handleNextTabs = () => {
-    const allTabs = TABS;
-    if (visibleTabsStart + 5 < allTabs.length) {
-      setVisibleTabsStart(prev => prev + 1);
-    }
-  };
-
-  // Update handlePrevTabs to use the new getVisibleTabs function
-  const handlePrevTabs = () => {
-    if (visibleTabsStart > 0) {
-      setVisibleTabsStart(prev => prev - 1);
-    }
+    // If there are unfinished sections, we should show the analysis UI
+    return hasUnfinishedSections;
   };
 
   // Function to trigger analysis
@@ -1592,6 +1547,18 @@ const TenderSummary = () => {
     );
   };
 
+  const handlePrevTabs = () => {
+    if (visibleTabsStart > 0) {
+      setVisibleTabsStart(prev => prev - 1);
+    }
+  };
+
+  const handleNextTabs = () => {
+    if (visibleTabsStart + 5 < availableTabs.length) {
+      setVisibleTabsStart(prev => prev + 1);
+    }
+  };
+
   // Update the renderActiveTabContent function
   const renderActiveTabContent = () => {
     const sectionState = getSectionState(activeTab, sectionStatus, sectionApiMapping);
@@ -1768,18 +1735,13 @@ const TenderSummary = () => {
     }
   };
 
-  // Update the tab click handler
-  const handleTabClick = (tabId: string) => {
-    const sectionState = getSectionState(tabId, sectionStatus, sectionApiMapping);
-    if (sectionState !== 'success') {
-      // Don't switch tabs if section is not ready
-      return;
-    }
-    setActiveTab(tabId);
-  };
-
-  // Update the visible tabs calculation
-  const visibleTabs = getVisibleTabs();
+  // Filter out empty sections and update the existing availableTabs
+  const visibleTabs = TABS
+    .filter(tab => {
+      const sectionState = getSectionState(tab.id, sectionStatus, sectionApiMapping);
+      return sectionState === 'success' || sectionState === 'analyzing';
+    })
+    .slice(visibleTabsStart, visibleTabsStart + 5);
 
   // Update the renderContentSection function to handle all cases and ensure contentItems is always defined before use
   const renderContentSection = (data: any) => {
@@ -2503,6 +2465,16 @@ const TenderSummary = () => {
     );
   };
 
+  // Update the tab click handler
+  const handleTabClick = (tabId: string) => {
+    const sectionState = getSectionState(tabId, sectionStatus, sectionApiMapping);
+    if (sectionState !== 'success') {
+      // Don't switch tabs if section is not ready
+      return;
+    }
+    setActiveTab(tabId);
+  };
+
   return (
     <div className="w-full px-4 py-8">
       <div className="mb-6">
@@ -2657,7 +2629,7 @@ const TenderSummary = () => {
 
               <nav className="py-4 pr-1">
                 <div className="space-y-1">
-                  {visibleTabs.map(tab => {
+                  {TABS.map(tab => {
                     const isActive = activeTab === tab.id;
                     const { status, hasData } = getSectionStatus(tab.id);
                     const showReanalyzeButton = tab.id !== 'tender_summary' && tab.id !== 'submission';
