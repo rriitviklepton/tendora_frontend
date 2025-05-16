@@ -631,7 +631,7 @@ const FinancialDetailsModal: React.FC<FinancialDetailsModalProps> = ({
 };
 
 // Add this near the top of the file after imports
-const POLLING_INTERVAL = 15000; // 15 seconds
+const POLLING_INTERVAL = 7000; // ` seconds
 
 // Add this before the TenderSummary component
 type SectionState = 'success' | 'failed' | 'analyzing';
@@ -1333,9 +1333,15 @@ const TenderSummary = () => {
 
   const renderPortalLink = (portalLink: string | null) => {
     if (!portalLink) return null;
+    
+    // Ensure the URL is absolute by adding https:// if needed
+    const absoluteUrl = portalLink.startsWith('http://') || portalLink.startsWith('https://')
+      ? portalLink
+      : `https://${portalLink}`;
+    
     return (
       <a 
-        href={portalLink} 
+        href={absoluteUrl} 
         target="_blank" 
         rel="noopener noreferrer"
         className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors"

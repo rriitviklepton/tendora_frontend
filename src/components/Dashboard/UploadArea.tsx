@@ -167,7 +167,7 @@ const UploadArea = () => {
       const interval = window.setInterval(() => {
         console.log('Polling iteration triggered');
         fetchSectionStatus(tenderId);
-      }, 15000);
+      }, 7000);
       
       setStatusInterval(interval);
 
