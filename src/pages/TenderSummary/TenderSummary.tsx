@@ -801,12 +801,12 @@ const TenderSummary = () => {
     const fetchTenderDetails = async () => {
       if (!id) return;
       
-      try {
-        // Fetch tender details including PDF URL
-        let url = `http://localhost:8000/tender/${id}?user_id=123`;
-        if (orgName) {
-          url += `&org_name=${encodeURIComponent(orgName)}`;
-        }
+              try {
+          // Fetch tender details including PDF URL
+          let url = `http://localhost:8000/tender/${id}?user_id=123`;
+          // Always use lepton as the default org_name if none is provided
+          const effectiveOrgName = orgName || 'lepton';
+          url += `&org_name=${encodeURIComponent(effectiveOrgName)}`;
         
         const response = await fetch(url);
         if (!response.ok) {
