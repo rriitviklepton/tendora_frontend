@@ -14,7 +14,7 @@ const Header = ({ toggleSidebar, toggleAssistant }: HeaderProps) => {
         <div className="flex items-center">
           <button
             type="button"
-            className="md:hidden p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+            className="p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100"
             onClick={toggleSidebar}
           >
             <Menu size={24} />

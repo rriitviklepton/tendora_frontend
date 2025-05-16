@@ -653,6 +653,7 @@ const TenderSummary = () => {
   const [orgName, setOrgName] = useState<string | null>(location.state?.org_name || null);
   const [reanalyzingSection, setReanalyzingSection] = useState<string | null>(null);
   const [sectionStatus, setSectionStatus] = useState<SectionStatus | null>(null);
+  const [isNavCollapsed, setIsNavCollapsed] = useState(false);
 
   // Add state for modals
   const [isEmdModalOpen, setIsEmdModalOpen] = useState(false);
@@ -1479,7 +1480,7 @@ const TenderSummary = () => {
 
   if (isLoading) {
     return (
-      <div className="max-w-7xl mx-auto text-center py-12">
+      <div className="w-full text-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
         <p className="mt-4 text-gray-600">Loading tender details...</p>
       </div>
@@ -1488,7 +1489,7 @@ const TenderSummary = () => {
 
   if (hasError) {
     return (
-      <div className="max-w-7xl mx-auto text-center py-12">
+      <div className="w-full text-center py-12">
         <h2 className="text-xl font-semibold text-gray-800">Error loading tender</h2>
         <p className="text-gray-600 mt-2">Failed to load one or more sections</p>
       </div>
@@ -1498,7 +1499,7 @@ const TenderSummary = () => {
   // Update the analysis UI to show progress like in UploadArea
   if (checkAllSectionsFailed()) {
     return (
-      <div className="max-w-7xl mx-auto">
+      <div className="w-full">
         <div className="mb-6">
           <a href="/" className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-4">
             <ArrowLeft size={16} className="mr-1" />
@@ -2331,7 +2332,7 @@ const TenderSummary = () => {
 
   if (isLoading) {
     return (
-      <div className="max-w-7xl mx-auto text-center py-12">
+      <div className="w-full text-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
         <p className="mt-4 text-gray-600">Loading tender details...</p>
       </div>
@@ -2340,7 +2341,7 @@ const TenderSummary = () => {
 
   if (hasError) {
     return (
-      <div className="max-w-7xl mx-auto text-center py-12">
+      <div className="w-full text-center py-12">
         <h2 className="text-xl font-semibold text-gray-800">Error loading tender</h2>
         <p className="text-gray-600 mt-2">Failed to load one or more sections</p>
       </div>
@@ -2350,7 +2351,7 @@ const TenderSummary = () => {
   // Update the analysis UI to show progress like in UploadArea
   if (checkAllSectionsFailed()) {
     return (
-      <div className="max-w-7xl mx-auto">
+      <div className="w-full">
         <div className="mb-6">
           <a href="/" className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-4">
             <ArrowLeft size={16} className="mr-1" />
@@ -2419,7 +2420,7 @@ const TenderSummary = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
+    <div className="w-full px-4 py-8">
       <div className="mb-6">
         <a href="/" className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-4">
           <ArrowLeft size={16} className="mr-1" />
@@ -2554,46 +2555,93 @@ const TenderSummary = () => {
             </div>
           </div>
           
-          {/* Section Navigation */}
-          <div className="mb-8 border-b border-gray-200 w-full">
-            <div className="flex items-center justify-between w-full">
-              {/* Previous button */}
+          {/* Main content layout */}
+          <div className="flex">
+            {/* Left Navigation */}
+            <div className={`${isNavCollapsed ? 'w-16' : 'w-64'} flex-shrink-0 border-r border-gray-200 transition-all duration-300 ease-in-out relative`}>
+              {/* Collapse Toggle Button */}
               <button
-                onClick={handlePrevTabs}
-                disabled={visibleTabsStart === 0}
-                className={`flex-shrink-0 p-2 rounded-lg ${
-                  visibleTabsStart === 0
-                    ? 'text-gray-300 cursor-not-allowed'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
+                onClick={() => setIsNavCollapsed(!isNavCollapsed)}
+                className="absolute -right-3 top-4 bg-white border border-gray-200 rounded-full p-1.5 shadow-sm hover:bg-gray-50"
               >
-                <ChevronLeft size={20} />
+                {isNavCollapsed ? (
+                  <ChevronRight size={16} className="text-gray-600" />
+                ) : (
+                  <ChevronLeft size={16} className="text-gray-600" />
+                )}
               </button>
-              
-              {/* Tabs container */}
-              <div className="flex-1 flex items-start justify-between gap-4 py-4 px-4 overflow-hidden">
-                {visibleTabs.map(tab => renderTabButton(tab.id, tab.name, <tab.icon size={18} />))}
-              </div>
 
-              {/* Next button */}
-              <button
-                onClick={handleNextTabs}
-                disabled={visibleTabsStart + 5 >= availableTabs.length}
-                className={`flex-shrink-0 p-2 rounded-lg ${
-                  visibleTabsStart + 5 >= availableTabs.length
-                    ? 'text-gray-300 cursor-not-allowed'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                <ChevronRight size={20} />
-              </button>
+              <nav className="py-4 pr-1">
+                <div className="space-y-1">
+                  {TABS.map(tab => {
+                    const isActive = activeTab === tab.id;
+                    const { status, hasData } = getSectionStatus(tab.id);
+                    const showReanalyzeButton = tab.id !== 'tender_summary' && tab.id !== 'submission';
+                    
+                    return (
+                      <div key={tab.id} className="mb-2">
+                        <button
+                          onClick={() => setActiveTab(tab.id)}
+                          className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                            isActive
+                              ? 'bg-blue-50 text-blue-700'
+                              : 'text-gray-700 hover:bg-gray-50'
+                          }`}
+                          title={isNavCollapsed ? tab.name : undefined}
+                        >
+                          <tab.icon size={18} className={`${isNavCollapsed ? '' : 'mr-2'} ${isActive ? 'text-blue-700' : 'text-gray-400'}`} />
+                          {!isNavCollapsed && <span>{tab.name}</span>}
+                          
+                          {/* Status indicators */}
+                          {!isNavCollapsed && status === 'failed' && (
+                            <AlertTriangle size={16} className="ml-auto text-amber-500" />
+                          )}
+                          {!isNavCollapsed && status === 'success' && hasData && (
+                            <CheckCircle size={16} className="ml-auto text-green-500" />
+                          )}
+                        </button>
+
+                        {/* Reanalyze button - only show when nav is expanded */}
+                        {!isNavCollapsed && showReanalyzeButton && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSectionReanalysis(tab.id);
+                            }}
+                            disabled={reanalyzingSection !== null}
+                            className={`mt-1 ml-8 inline-flex items-center px-2 py-1 text-xs font-medium rounded ${
+                              reanalyzingSection === tab.id
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                : 'text-blue-700 bg-blue-50 hover:bg-blue-100'
+                            }`}
+                          >
+                            {reanalyzingSection === tab.id ? (
+                              <>
+                                <div className="animate-spin rounded-full h-3 w-3 border-2 border-blue-600 border-t-transparent mr-1" />
+                                <span>Analyzing...</span>
+                              </>
+                            ) : (
+                              <>
+                                <RefreshCw size={12} className="mr-1" />
+                                <span>Reanalyze</span>
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </nav>
+            </div>
+
+            {/* Content Area */}
+            <div className="flex-1 overflow-auto p-6">
+              {renderActiveTabContent()}
             </div>
           </div>
-          
-          {/* Tab Content */}
-          <div className="p-6">
-            {renderActiveTabContent()}
-          </div>
+
+          {/* Remove the old tab content div since it's now part of the flex layout */}
         </div>
       </div>
       

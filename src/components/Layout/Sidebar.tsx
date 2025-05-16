@@ -21,17 +21,17 @@ const Sidebar = ({ open, setOpen }: SidebarProps) => {
 
   return (
     <>
-      {/* Mobile backdrop */}
+      {/* Backdrop for all screen sizes */}
       {open && (
         <div 
-          className="fixed inset-0 z-40 bg-gray-600 bg-opacity-75 md:hidden"
+          className="fixed inset-0 z-40 bg-gray-600 bg-opacity-75"
           onClick={() => setOpen(false)}
         ></div>
       )}
 
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-blue-700 transform transition-transform duration-300 ease-in-out md:translate-x-0 md:static md:h-screen ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-blue-700 transform transition-transform duration-300 ease-in-out ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -42,7 +42,7 @@ const Sidebar = ({ open, setOpen }: SidebarProps) => {
           </div>
           <button
             type="button"
-            className="md:hidden text-white hover:text-gray-200 focus:outline-none"
+            className="text-white hover:text-gray-200 focus:outline-none"
             onClick={() => setOpen(false)}
           >
             <X size={24} />

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, 
   SendHorizontal, 
@@ -8,6 +8,24 @@ import {
   Loader2,
   AlertTriangle 
 } from 'lucide-react';
+
+// Add animation styles
+const animationStyles = `
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out forwards;
+  }
+`;
 
 // Simple function to generate a unique ID
 const generateId = () => {
@@ -42,11 +60,12 @@ interface AIAssistantProps {
 }
 
 const AIAssistant = ({ open, setOpen }: AIAssistantProps) => {
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   const [sessions, setSessions] = useState<Session[]>([{
     id: generateId(),
     number: 1,
     messages: [{ 
-      text: "👋 Hi! I'm your AI Tender Assistant. To get started, please select a tender from the dropdown above. Once selected, I can help you with:\n\n• Understanding tender requirements\n• Analyzing submission processes\n• Explaining eligibility criteria\n• Clarifying technical specifications\n• And more!", 
+      text: "👋 Hi! I'm your SmartTender Assistant. To get started, please select a tender from the dropdown above. Once selected, I can help you with:\n\n• Understanding tender requirements\n• Analyzing submission processes\n• Explaining eligibility criteria\n• Clarifying technical specifications\n• And more!", 
       isBot: true 
     }]
   }]);
@@ -184,7 +203,7 @@ const AIAssistant = ({ open, setOpen }: AIAssistantProps) => {
         tenderId: undefined,
         tenderInfo: undefined,
         messages: [{
-          text: "👋 Hi! I'm your AI Tender Assistant. To get started, please select a tender from the dropdown above. Once selected, I can help you with:\n\n• Understanding tender requirements\n• Analyzing submission processes\n• Explaining eligibility criteria\n• Clarifying technical specifications\n• And more!",
+          text: "👋 Hi! I'm your SmartTender Assistant. To get started, please select a tender from the dropdown above. Once selected, I can help you with:\n\n• Understanding tender requirements\n• Analyzing submission processes\n• Explaining eligibility criteria\n• Clarifying technical specifications\n• And more!",
           isBot: true
         }]
       };
@@ -205,7 +224,7 @@ const AIAssistant = ({ open, setOpen }: AIAssistantProps) => {
       id: newSessionId,
       number: sessions.length + 1,
       messages: [{
-        text: "👋 Hi! I'm your AI Tender Assistant. To get started, please select a tender from the dropdown above. Once selected, I can help you with:\n\n• Understanding tender requirements\n• Analyzing submission processes\n• Explaining eligibility criteria\n• Clarifying technical specifications\n• And more!",
+        text: "👋 Hi! I'm your SmartTender Assistant. To get started, please select a tender from the dropdown above. Once selected, I can help you with:\n\n• Understanding tender requirements\n• Analyzing submission processes\n• Explaining eligibility criteria\n• Clarifying technical specifications\n• And more!",
         isBot: true
       }]
     };
@@ -256,8 +275,8 @@ const AIAssistant = ({ open, setOpen }: AIAssistantProps) => {
         prompt: text,
         session_id: currentSession.id,
         tender_id: currentSession.tenderId,
-        user_id: 123, // Replace with actual user ID
-        org_name: currentSession.tenderInfo?.org_name || "lepton", // Use org_name from tender info or default
+        user_id: 123,
+        org_name: currentSession.tenderInfo?.org_name || "lepton",
         tender_info: currentSession.tenderInfo
       };
 
@@ -285,6 +304,19 @@ const AIAssistant = ({ open, setOpen }: AIAssistantProps) => {
       const decoder = new TextDecoder();
       let fullResponse = "";
 
+      const scrollToBottom = () => {
+        if (chatContainerRef.current) {
+          const scrollContainer = chatContainerRef.current;
+          const isAtBottom = scrollContainer.scrollHeight - scrollContainer.scrollTop <= scrollContainer.clientHeight + 100;
+          
+          if (isAtBottom) {
+            setTimeout(() => {
+              scrollContainer.scrollTop = scrollContainer.scrollHeight;
+            }, 0);
+          }
+        }
+      };
+
       try {
         while (true) {
           const { done, value } = await reader.read();
@@ -302,6 +334,9 @@ const AIAssistant = ({ open, setOpen }: AIAssistantProps) => {
           const currentMessages = newSessions[currentSessionIndex].messages;
           currentMessages[currentMessages.length - 1] = { text: fullResponse, isBot: true, isLoading: false };
           setSessions(newSessions);
+          
+          // Scroll to bottom after each chunk
+          scrollToBottom();
         }
       } catch (streamError) {
         console.error('Error reading stream:', streamError);
@@ -319,6 +354,10 @@ const AIAssistant = ({ open, setOpen }: AIAssistantProps) => {
       setSessions(errorSessions);
     } finally {
       setIsLoading(false);
+      // Final scroll to bottom
+      if (chatContainerRef.current) {
+        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+      }
     }
   };
 
@@ -339,41 +378,52 @@ const AIAssistant = ({ open, setOpen }: AIAssistantProps) => {
     }
   };
 
+  // Add auto-scroll effect
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [sessions[currentSessionIndex].messages]);
+
   return (
     <div
       className={`fixed inset-y-0 right-0 z-40 w-96 bg-white shadow-lg transform transition-transform duration-300 ease-in-out ${
         open ? 'translate-x-0' : 'translate-x-full'
       }`}
     >
+      <style>{animationStyles}</style>
       {/* Header */}
-      <div className="flex flex-col px-4 py-3 border-b border-gray-200">
+      <div className="flex flex-col px-4 py-3 border-b border-gray-200 bg-white">
         <div className="flex items-center justify-between mb-2">
           <div>
-            <h3 className="text-lg font-medium text-gray-800">AI Assistant</h3>
+            <h3 className="text-lg font-medium text-gray-800 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-green-500"></span>
+              SmartTender Assistant
+            </h3>
             <div className="flex items-center gap-2 text-xs text-gray-500">
               <button
                 onClick={() => navigateSession('prev')}
                 disabled={currentSessionIndex === 0}
-                className={`p-0.5 rounded hover:bg-gray-100 ${currentSessionIndex === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`p-1 rounded-full hover:bg-gray-100 ${currentSessionIndex === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                 title="Previous session"
               >
-                <ChevronLeft size={14} />
+                <ChevronLeft size={16} />
               </button>
-              <span>Session #{currentSession.number}</span>
+              <span className="font-medium">Session #{currentSession.number}</span>
               <button
                 onClick={() => navigateSession('next')}
                 disabled={currentSessionIndex === sessions.length - 1}
-                className={`p-0.5 rounded hover:bg-gray-100 ${currentSessionIndex === sessions.length - 1 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`p-1 rounded-full hover:bg-gray-100 ${currentSessionIndex === sessions.length - 1 ? 'opacity-50 cursor-not-allowed' : ''}`}
                 title="Next session"
               >
-                <ChevronRight size={14} />
+                <ChevronRight size={16} />
               </button>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <button
               type="button"
-              className="text-gray-500 hover:text-gray-700 p-1 hover:bg-gray-100 rounded-full"
+              className="text-gray-500 hover:text-gray-700 p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
               onClick={startNewSession}
               title="Start new session"
             >
@@ -381,7 +431,7 @@ const AIAssistant = ({ open, setOpen }: AIAssistantProps) => {
             </button>
             <button
               type="button"
-              className="text-gray-500 hover:text-gray-700 p-1 hover:bg-gray-100 rounded-full"
+              className="text-gray-500 hover:text-gray-700 p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
               onClick={() => setOpen(false)}
             >
               <X size={20} />
@@ -390,11 +440,11 @@ const AIAssistant = ({ open, setOpen }: AIAssistantProps) => {
         </div>
         
         {/* Tender Selection */}
-        <div className="w-full">
+        <div className="w-full mt-2">
           <select
             value={selectedTenderId || ''}
             onChange={handleTenderChange}
-            className={`w-full p-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+            className={`w-full p-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm ${
               isFetchingTender ? 'opacity-50 cursor-wait' : ''
             }`}
             disabled={isFetchingTender || isLoading}
@@ -407,8 +457,8 @@ const AIAssistant = ({ open, setOpen }: AIAssistantProps) => {
             ))}
           </select>
           {!selectedTenderId && (
-            <p className="mt-2 text-xs text-amber-600 flex items-center">
-              <AlertTriangle size={12} className="mr-1" />
+            <p className="mt-2 text-xs text-amber-600 flex items-center bg-amber-50 p-2 rounded-md">
+              <AlertTriangle size={12} className="mr-1 flex-shrink-0" />
               Please select a tender to start the conversation
             </p>
           )}
@@ -417,16 +467,19 @@ const AIAssistant = ({ open, setOpen }: AIAssistantProps) => {
       
       {/* Chat area */}
       <div className="flex flex-col h-[calc(100%-8rem)]">
-        <div className="flex-1 p-4 overflow-y-auto space-y-4">
+        <div 
+          ref={chatContainerRef}
+          className="flex-1 p-4 overflow-y-auto space-y-4 bg-gray-50"
+        >
           {currentSession.messages.map((message, index) => (
             <div
               key={index}
-              className={`flex ${message.isBot ? 'justify-start' : 'justify-end'}`}
+              className={`flex ${message.isBot ? 'justify-start' : 'justify-end'} animate-fade-in`}
             >
               <div
-                className={`max-w-[85%] p-3 rounded-lg ${
+                className={`max-w-[85%] p-3 rounded-lg shadow-sm ${
                   message.isBot
-                    ? 'bg-gray-100 text-gray-800'
+                    ? 'bg-white text-gray-800 border border-gray-100'
                     : 'bg-blue-600 text-white'
                 }`}
               >
@@ -436,7 +489,7 @@ const AIAssistant = ({ open, setOpen }: AIAssistantProps) => {
                     <span>Thinking...</span>
                   </div>
                 ) : (
-                  <p className="text-sm whitespace-pre-wrap">{message.text}</p>
+                  <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.text}</p>
                 )}
               </div>
             </div>
@@ -444,35 +497,39 @@ const AIAssistant = ({ open, setOpen }: AIAssistantProps) => {
         </div>
         
         {/* Input area */}
-        <div className="p-3 border-t border-gray-200">
-          <div className="flex items-center">
+        <div className="p-3 border-t border-gray-200 bg-white">
+          <div className="flex items-center gap-2">
             <input
               type="text"   
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder={selectedTenderId ? "Ask me anything about this tender..." : "Please select a tender first..."}
-              className={`flex-1 p-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                !selectedTenderId ? 'bg-gray-50 cursor-not-allowed' : ''
+              className={`flex-1 p-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200 ${
+                !selectedTenderId ? 'bg-gray-50 cursor-not-allowed' : 'bg-white'
               }`}
               disabled={isLoading || !selectedTenderId}
             />
             <button
-              className={`p-2 text-white rounded-r-md transition-colors ${
+              className={`p-2.5 text-white rounded-lg transition-all duration-200 flex items-center justify-center w-12 h-[42px] ${
                 isLoading || !inputText.trim() || !selectedTenderId 
-                  ? 'bg-gray-400 cursor-not-allowed' 
-                  : 'bg-blue-600 hover:bg-blue-700'
+                  ? 'bg-gray-400 cursor-not-allowed opacity-50' 
+                  : 'bg-blue-600 hover:bg-blue-700 hover:shadow-md'
               }`}
               onClick={() => sendMessage(inputText)}
               disabled={isLoading || !inputText.trim() || !selectedTenderId}
-              title={!selectedTenderId ? "Please select a tender first" : ""}
+              title={!selectedTenderId ? "Please select a tender first" : "Send message"}
             >
-              <SendHorizontal size={20} />
+              {isLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <SendHorizontal size={20} />
+              )}
             </button>
           </div>
           {!selectedTenderId && inputText.trim() && (
-            <p className="mt-2 text-xs text-amber-600 flex items-center">
-              <AlertTriangle size={12} className="mr-1" />
+            <p className="mt-2 text-xs text-amber-600 flex items-center bg-amber-50 p-2 rounded-md">
+              <AlertTriangle size={12} className="mr-1 flex-shrink-0" />
               Please select a tender before sending a message
             </p>
           )}
