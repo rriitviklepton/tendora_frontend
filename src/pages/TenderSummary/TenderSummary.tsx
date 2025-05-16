@@ -137,7 +137,7 @@ const sectionApiMapping: SectionMapping = {
 };
 
 // Custom hooks for section data
-const useSectionDetails = (tenderId: string, sectionName: string, orgName?: string) => {
+const useSectionDetails = (tenderId: string, sectionName: string, orgName?: string, enabled: boolean = true) => {
   return useQuery<SectionResponse>({
     queryKey: ['tender', tenderId, 'section', sectionName, { orgName }],
     queryFn: async () => {
@@ -153,7 +153,7 @@ const useSectionDetails = (tenderId: string, sectionName: string, orgName?: stri
       }
       return response.json();
     },
-    enabled: Boolean(tenderId && sectionName),
+    enabled: Boolean(tenderId && sectionName && enabled),
     staleTime: 5 * 60 * 1000, // Data remains fresh for 5 minutes
     gcTime: 30 * 60 * 1000, // Cache persists for 30 minutes
     refetchOnMount: false, // Don't refetch on mount
@@ -524,7 +524,7 @@ interface ComplianceMatrixRow {
 // Update the StatusBadge component props
 interface StatusBadgeProps {
   status: string;
-  color: 'red' | 'blue' | 'yellow' | 'green' | 'gray';
+  color?: 'red' | 'blue' | 'yellow' | 'green' | 'gray';
 }
 
 // Update the TenderStatus type to include compliance statuses
@@ -630,6 +630,49 @@ const FinancialDetailsModal: React.FC<FinancialDetailsModalProps> = ({
   );
 };
 
+// Add this near the top of the file after imports
+const POLLING_INTERVAL = 15000; // 15 seconds
+
+// Add this before the TenderSummary component
+type SectionState = 'success' | 'failed' | 'analyzing';
+
+const isSectionAccessible = (
+  sectionId: string,
+  sectionStatus: SectionStatus | null,
+  sectionApiMapping: SectionMapping
+): boolean => {
+  if (!sectionStatus?.sections) return false;
+  
+  const section = sectionStatus.sections[sectionApiMapping[sectionId]];
+  
+  // If it's tender summary or scope of work, they need to be in success state
+  if (sectionId === 'tender_summary' || sectionId === 'scope') {
+    return section?.status === 'success';
+  }
+  
+  // For other sections, they're accessible if:
+  // 1. Tender summary and scope are successful
+  // 2. This section is either successful or not yet started
+  const tenderSummaryOk = sectionStatus.sections['tender_summary']?.status === 'success';
+  const scopeOk = sectionStatus.sections['scope_of_work']?.status === 'success';
+  
+  if (!tenderSummaryOk || !scopeOk) return false;
+  
+  return section?.status === 'success' || !section?.status;
+};
+
+// Add helper function to get section state
+const getSectionState = (
+  sectionId: string,
+  sectionStatus: SectionStatus | null,
+  sectionApiMapping: SectionMapping
+): SectionState | null => {
+  if (!sectionStatus?.sections) return null;
+  
+  const section = sectionStatus.sections[sectionApiMapping[sectionId]];
+  return section?.status as SectionState;
+};
+
 const TenderSummary = () => {
   console.log('TenderSummary component rendering');
   const { id } = useParams<{ id: string }>();
@@ -654,69 +697,111 @@ const TenderSummary = () => {
   const [reanalyzingSection, setReanalyzingSection] = useState<string | null>(null);
   const [sectionStatus, setSectionStatus] = useState<SectionStatus | null>(null);
   const [isNavCollapsed, setIsNavCollapsed] = useState(false);
-
-  // Add state for modals
   const [isEmdModalOpen, setIsEmdModalOpen] = useState(false);
   const [isTenderFeeModalOpen, setIsTenderFeeModalOpen] = useState(false);
+  const [isPolling, setIsPolling] = useState(false);
 
-  // React Query hooks for each section
-  const scopeQuery = useSectionDetails(id || '', 'scope_of_work', orgName || undefined);
-  const tenderSummaryQuery = useSectionDetails(id || '', 'tender_summary', orgName || undefined);
-  console.log('Scope Query:', {
-    isLoading: scopeQuery.isLoading,
-    isError: scopeQuery.isError,
-    data: scopeQuery.data
-  });
-
-  const eligibilityQuery = useSectionDetails(id || '', 'eligibility_conditions', orgName || undefined);
-  console.log('Eligibility Query:', {
-    isLoading: eligibilityQuery.isLoading,
-    isError: eligibilityQuery.isError,
-    data: eligibilityQuery.data
-  });
-
-  const technicalQuery = useSectionDetails(id || '', 'technical_requirements', orgName || undefined);
-  const financialQuery = useSectionDetails(id || '', 'financial_requirements', orgName || undefined);
-  const boqQuery = useSectionDetails(id || '', 'bill_of_quantities', orgName || undefined);
-  const conditionsQuery = useSectionDetails(id || '', 'conditions_of_contract', orgName || undefined);
-  const complianceQuery = useSectionDetails(id || '', 'compliance_requirements', orgName || undefined);
-  const datesQuery = useSectionDetails(id || '', 'important_dates', orgName || undefined);
-  const annexuresQuery = useSectionDetails(id || '', 'annexures_attachments', orgName || undefined);
-
-  // Add evaluation criteria query
-  const evaluationQuery = useSectionDetails(id || '', 'evaluation_criteria', orgName || undefined);
+  // React Query hooks for each section - enable only when needed
+  const scopeQuery = useSectionDetails(
+    id || '', 
+    'scope_of_work', 
+    orgName || undefined, 
+    isSectionAccessible('scope', sectionStatus, sectionApiMapping)
+  );
+  const tenderSummaryQuery = useSectionDetails(id || '', 'tender_summary', orgName || undefined, true); // Always enabled
+  const eligibilityQuery = useSectionDetails(
+    id || '', 
+    'eligibility_conditions', 
+    orgName || undefined, 
+    activeTab === 'eligibility' && isSectionAccessible('eligibility', sectionStatus, sectionApiMapping)
+  );
+  const technicalQuery = useSectionDetails(
+    id || '', 
+    'technical_requirements', 
+    orgName || undefined, 
+    activeTab === 'technical' && isSectionAccessible('technical', sectionStatus, sectionApiMapping)
+  );
+  const financialQuery = useSectionDetails(
+    id || '', 
+    'financial_requirements', 
+    orgName || undefined, 
+    activeTab === 'financial' && isSectionAccessible('financial', sectionStatus, sectionApiMapping)
+  );
+  const boqQuery = useSectionDetails(
+    id || '', 
+    'bill_of_quantities', 
+    orgName || undefined, 
+    activeTab === 'boq' && isSectionAccessible('boq', sectionStatus, sectionApiMapping)
+  );
+  const conditionsQuery = useSectionDetails(
+    id || '', 
+    'conditions_of_contract', 
+    orgName || undefined, 
+    activeTab === 'conditions' && isSectionAccessible('conditions', sectionStatus, sectionApiMapping)
+  );
+  const complianceQuery = useSectionDetails(
+    id || '', 
+    'compliance_requirements', 
+    orgName || undefined, 
+    activeTab === 'compliance' && isSectionAccessible('compliance', sectionStatus, sectionApiMapping)
+  );
+  const datesQuery = useSectionDetails(
+    id || '', 
+    'important_dates', 
+    orgName || undefined, 
+    activeTab === 'dates' && isSectionAccessible('dates', sectionStatus, sectionApiMapping)
+  );
+  const annexuresQuery = useSectionDetails(
+    id || '', 
+    'annexures_attachments', 
+    orgName || undefined, 
+    activeTab === 'submission' && isSectionAccessible('submission', sectionStatus, sectionApiMapping)
+  );
+  const evaluationQuery = useSectionDetails(
+    id || '', 
+    'evaluation_criteria', 
+    orgName || undefined, 
+    activeTab === 'evaluation' && isSectionAccessible('evaluation', sectionStatus, sectionApiMapping)
+  );
 
   // Mutation for reanalyzing sections
   const reanalyzeMutation = useReanalyzeSection();
 
-  // Check if all sections are loading
-  const isLoading = [
-    scopeQuery,
-    tenderSummaryQuery,
-    evaluationQuery,
-    eligibilityQuery,
-    technicalQuery,
-    financialQuery,
-    boqQuery,
-    conditionsQuery,
-    complianceQuery,
-    datesQuery,
-    annexuresQuery
-  ].some(query => query.isLoading);
+  // Check if initial data is loading
+  const isInitialLoading = tenderSummaryQuery.isLoading || scopeQuery.isLoading;
+
+  // Check if active section is loading
+  const isActiveSectionLoading = () => {
+    switch (activeTab) {
+      case 'scope':
+        return scopeQuery.isLoading;
+      case 'eligibility':
+        return eligibilityQuery.isLoading;
+      case 'technical':
+        return technicalQuery.isLoading;
+      case 'financial':
+        return financialQuery.isLoading;
+      case 'boq':
+        return boqQuery.isLoading;
+      case 'conditions':
+        return conditionsQuery.isLoading;
+      case 'compliance':
+        return complianceQuery.isLoading;
+      case 'dates':
+        return datesQuery.isLoading;
+      case 'submission':
+        return annexuresQuery.isLoading;
+      case 'evaluation':
+        return evaluationQuery.isLoading;
+      default:
+        return false;
+    }
+  };
 
   // Check if any section has errored
   const hasError = [
     scopeQuery,
-    tenderSummaryQuery,
-    evaluationQuery,
-    eligibilityQuery,
-    technicalQuery,
-    financialQuery,
-    boqQuery,
-    conditionsQuery,
-    complianceQuery,
-    datesQuery,
-    annexuresQuery
+    tenderSummaryQuery
   ].some(query => query.isError);
   
   // Function to handle section reanalysis
@@ -837,6 +922,12 @@ const TenderSummary = () => {
         const response = await fetch(statusUrl);
         const data = await response.json();
         setSectionStatus(data);
+        
+        // Check if any section is still analyzing
+        const hasAnalyzingSections = Object.values(data.sections).some(
+          (section: any) => section.status === 'analyzing'
+        );
+        setIsPolling(hasAnalyzingSections);
       } catch (error) {
         console.error('Error fetching section status:', error);
       }
@@ -845,17 +936,48 @@ const TenderSummary = () => {
     fetchSectionStatus();
   }, [id]);
 
-  // Update checkAllSectionsFailed to use sectionStatus
+  // Update checkAllSectionsFailed to only check tender summary and scope of work
   const checkAllSectionsFailed = () => {
     if (!sectionStatus?.sections) return false;
     
-    // Check if any sections are still analyzing or not started
-    const hasUnfinishedSections = Object.values(sectionStatus.sections).some(
-      (section: any) => section.status === 'analyzing' || section.status === null
-    );
+    const tenderSummarySection = sectionStatus.sections['tender_summary'];
+    const scopeSection = sectionStatus.sections['scope_of_work'];
 
-    // If there are unfinished sections, we should show the analysis UI
-    return hasUnfinishedSections;
+    // Show analyzing UI only if tender summary or scope of work is analyzing
+    const isAnalyzing = 
+      tenderSummarySection?.status === 'analyzing' || 
+      scopeSection?.status === 'analyzing';
+
+    // If either section is not started, show analyzing UI
+    const notStarted = 
+      !tenderSummarySection?.status || 
+      !scopeSection?.status;
+
+    return isAnalyzing || notStarted;
+  };
+
+  // Update the tab visibility logic
+  const getVisibleTabs = () => {
+    // Always show all tabs
+    const allTabs = [...TABS];
+    
+    // Calculate how many tabs to show based on current view
+    return allTabs.slice(visibleTabsStart, visibleTabsStart + 5);
+  };
+
+  // Update handleNextTabs to use the new getVisibleTabs function
+  const handleNextTabs = () => {
+    const allTabs = TABS;
+    if (visibleTabsStart + 5 < allTabs.length) {
+      setVisibleTabsStart(prev => prev + 1);
+    }
+  };
+
+  // Update handlePrevTabs to use the new getVisibleTabs function
+  const handlePrevTabs = () => {
+    if (visibleTabsStart > 0) {
+      setVisibleTabsStart(prev => prev - 1);
+    }
   };
 
   // Function to trigger analysis
@@ -1411,74 +1533,129 @@ const TenderSummary = () => {
   // Function to render tab button with status
   const renderTabButton = (id: string, label: string, icon: React.ReactNode) => {
     const isActive = activeTab === id;
-    const sectionStatus = getSectionStatus(id);
-    const canReanalyze = id !== 'tender_summary' && id !== 'submission';
+    const sectionState = getSectionState(id, sectionStatus, sectionApiMapping);
+    const isAccessible = sectionState === 'success';
+    const isAnalyzing = sectionState === 'analyzing';
+    const hasFailed = sectionState === 'failed';
     
     return (
       <div className="flex flex-col flex-1">
         <button
           key={id}
-          onClick={() => setActiveTab(id)}
+          onClick={() => handleTabClick(id)}
+          disabled={!isAccessible && !isAnalyzing}
           className={`
             w-full flex items-center justify-start gap-2 px-4 py-2.5 rounded-lg text-sm font-medium
             transition-colors relative
             ${isActive 
               ? 'bg-blue-600 text-white' 
-              : 'text-gray-600 hover:bg-gray-100'
+              : isAccessible
+                ? 'text-gray-600 hover:bg-gray-100'
+                : 'text-gray-400 cursor-not-allowed bg-gray-50'
             }
           `}
         >
           {icon}
           <span>{label}</span>
-          {sectionStatus.status === 'failed' && (
-            <div className={`absolute -top-1 -right-1 w-2 h-2 rounded-full ${isActive ? 'bg-white' : 'bg-amber-500'}`} />
+          {isAnalyzing && (
+            <div className="absolute right-2 top-1/2 -translate-y-1/2">
+              <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent"></div>
+            </div>
+          )}
+          {hasFailed && (
+            <div className="absolute right-2 top-1/2 -translate-y-1/2">
+              <AlertTriangle size={16} className="text-amber-500" />
+            </div>
+          )}
+          {!isAccessible && !isAnalyzing && !hasFailed && (
+            <div className="absolute right-2 top-1/2 -translate-y-1/2">
+              <Clock size={16} className="text-gray-400" />
+            </div>
           )}
         </button>
         
-        {/* Add reanalysis button */}
-        {canReanalyze && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleSectionReanalysis(id);
-            }}
-            disabled={reanalyzingSection !== null}
-            className={`mt-1 inline-flex items-center justify-center px-3 py-1 rounded-md text-xs font-medium ${
-              reanalyzingSection === id
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
-            }`}
-          >
-            {reanalyzingSection === id ? (
-              <>
-                <div className="animate-spin rounded-full h-3 w-3 border border-blue-600 border-t-transparent mr-1" />
-                <span>Analyzing...</span>
-              </>
-            ) : (
-              <>
-                <RefreshCw size={12} className="mr-1" />
-                <span>Reanalyze</span>
-              </>
+        {/* Status badge for section state */}
+        {!isNavCollapsed && (
+          <div className="mt-1 ml-8">
+            {isAnalyzing && (
+              <StatusBadge status="Analyzing" color="blue" />
             )}
-          </button>
+            {hasFailed && (
+              <StatusBadge status="Failed" color="red" />
+            )}
+            {isAccessible && (
+              <StatusBadge status="Completed" color="green" />
+            )}
+          </div>
         )}
       </div>
     );
   };
 
-  const handlePrevTabs = () => {
-    if (visibleTabsStart > 0) {
-      setVisibleTabsStart(prev => prev - 1);
+  // Update the renderActiveTabContent function
+  const renderActiveTabContent = () => {
+    const sectionState = getSectionState(activeTab, sectionStatus, sectionApiMapping);
+
+    if (sectionState === 'analyzing') {
+      return (
+        <div className="flex flex-col items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent mb-4"></div>
+          <p className="text-gray-600">This section is being analyzed...</p>
+        </div>
+      );
+    }
+
+    if (sectionState === 'failed') {
+      return (
+        <div className="flex flex-col items-center justify-center h-64">
+          <AlertTriangle size={32} className="text-amber-500 mb-4" />
+          <p className="text-gray-600 mb-2">Failed to analyze this section</p>
+          <button
+            onClick={() => handleSectionReanalysis(activeTab)}
+            className="px-4 py-2 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      );
+    }
+
+    if (isActiveSectionLoading()) {
+      return (
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent"></div>
+        </div>
+      );
+    }
+
+    switch (activeTab) {
+      case 'scope':
+        return renderScopeOfWork();
+      case 'evaluation':
+        return renderEvaluationCriteria();
+      case 'eligibility':
+        return renderEligibilityConditions();
+      case 'technical':
+        return renderTechnicalEvaluation();
+      case 'financial':
+        return renderFinancialRequirements();
+      case 'boq':
+        return renderBillOfQuantities();
+      case 'conditions':
+        return renderContractConditions();
+      case 'compliance':
+        return renderComplianceRequirements();
+      case 'dates':
+        return renderImportantDates();
+      case 'submission':
+        return renderSubmissionRequirements();
+      default:
+        return null;
     }
   };
 
-  const handleNextTabs = () => {
-    if (visibleTabsStart + 5 < availableTabs.length) {
-      setVisibleTabsStart(prev => prev + 1);
-    }
-  };
-
-  if (isLoading) {
+  // Update the main loading check
+  if (isInitialLoading) {
     return (
       <div className="w-full text-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
@@ -1491,12 +1668,11 @@ const TenderSummary = () => {
     return (
       <div className="w-full text-center py-12">
         <h2 className="text-xl font-semibold text-gray-800">Error loading tender</h2>
-        <p className="text-gray-600 mt-2">Failed to load one or more sections</p>
+        <p className="text-gray-600 mt-2">Failed to load initial tender data</p>
       </div>
     );
   }
 
-  // Update the analysis UI to show progress like in UploadArea
   if (checkAllSectionsFailed()) {
     return (
       <div className="w-full">
@@ -1567,18 +1743,43 @@ const TenderSummary = () => {
     );
   }
 
+  // Get tender summary data from the query
   const tenderSummaryData = tenderSummaryQuery.data?.processed_section || {
     title: null,
     tenderNumber: null,
     issuingAuthority: null,
     tenderMode: null,
-    portalLink: null
+    portalLink: null,
+    financial_requirements: {
+      emd: {
+        amount: null,
+        payment_mode: null,
+        validity_period: null,
+        exemptions: null,
+        refund_terms: null
+      },
+      tender_fee: {
+        amount: null,
+        payment_mode: null,
+        is_refundable: null,
+        exemptions: null
+      },
+      estimated_value: null
+    }
   };
 
-  // Filter out empty sections
-  // const availableTabs = TABS.filter(tab => hasSectionContent(tab.id));
-  const availableTabs = TABS;
-  const visibleTabs = availableTabs.slice(visibleTabsStart, visibleTabsStart + 5);
+  // Update the tab click handler
+  const handleTabClick = (tabId: string) => {
+    const sectionState = getSectionState(tabId, sectionStatus, sectionApiMapping);
+    if (sectionState !== 'success') {
+      // Don't switch tabs if section is not ready
+      return;
+    }
+    setActiveTab(tabId);
+  };
+
+  // Update the visible tabs calculation
+  const visibleTabs = getVisibleTabs();
 
   // Update the renderContentSection function to handle all cases and ensure contentItems is always defined before use
   const renderContentSection = (data: any) => {
@@ -2289,34 +2490,6 @@ const TenderSummary = () => {
     </tr>
   );
 
-  // Add back the renderActiveTabContent function
-  const renderActiveTabContent = () => {
-    switch (activeTab) {
-      case 'scope':
-        return renderScopeOfWork();
-      case 'evaluation':
-        return renderEvaluationCriteria();
-      case 'eligibility':
-        return renderEligibilityConditions();
-      case 'technical':
-        return renderTechnicalEvaluation();
-      case 'financial':
-        return renderFinancialRequirements();
-      case 'boq':
-        return renderBillOfQuantities();
-      case 'conditions':
-        return renderContractConditions();
-      case 'compliance':
-        return renderComplianceRequirements();
-      case 'dates':
-        return renderImportantDates();
-      case 'submission':
-        return renderSubmissionRequirements();
-      default:
-        return null;
-    }
-  };
-
   // Add renderEvaluationCriteria function
   const renderEvaluationCriteria = () => {
     if (evaluationQuery.isLoading) return <div>Loading...</div>;
@@ -2329,95 +2502,6 @@ const TenderSummary = () => {
       </div>
     );
   };
-
-  if (isLoading) {
-    return (
-      <div className="w-full text-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-        <p className="mt-4 text-gray-600">Loading tender details...</p>
-      </div>
-    );
-  }
-
-  if (hasError) {
-    return (
-      <div className="w-full text-center py-12">
-        <h2 className="text-xl font-semibold text-gray-800">Error loading tender</h2>
-        <p className="text-gray-600 mt-2">Failed to load one or more sections</p>
-      </div>
-    );
-  }
-
-  // Update the analysis UI to show progress like in UploadArea
-  if (checkAllSectionsFailed()) {
-    return (
-      <div className="w-full">
-        <div className="mb-6">
-          <a href="/" className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-4">
-            <ArrowLeft size={16} className="mr-1" />
-            Back to Dashboard
-          </a>
-          
-          <div className="bg-white rounded-lg shadow-sm p-8">
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">{originalTenderName}</h1>
-            
-            {sectionStatus ? (
-              <div className="flex flex-col items-center w-full max-w-2xl mx-auto">
-                <Loader size={40} className="text-blue-500 animate-spin mb-3" />
-                <p className="text-sm text-gray-600 mb-4">
-                  Analyzing tender document... ({sectionStatus.progress.completion_percentage.toFixed(1)}% complete)
-                </p>
-                
-                <div className="w-full space-y-2">
-                  {Object.entries(sectionStatus.sections)
-                    .sort((a, b) => a[1].order - b[1].order)
-                    .map(([key, section]) => (
-                      <div key={key} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                        <span className="text-sm text-gray-700">{section.name}</span>
-                        <div className="flex items-center">
-                          {section.status === 'analyzing' && (
-                            <Loader size={16} className="text-blue-500 animate-spin" />
-                          )}
-                          {section.status === 'success' && (
-                            <CheckCircle size={16} className="text-green-500" />
-                          )}
-                          {section.status === 'failed' && (
-                            <XCircle size={16} className="text-red-500" />
-                          )}
-                          {section.status === null && (
-                            <div className="w-4 h-4 rounded-full bg-gray-200" />
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                </div>
-                
-                <div className="w-full mt-4 bg-gray-200 rounded-full h-2 overflow-hidden">
-                  <div 
-                    className="h-full bg-blue-500 transition-all duration-500"
-                    style={{ width: `${sectionStatus.progress.completion_percentage}%` }}
-                  />
-                </div>
-                
-                <p className="text-xs text-gray-500 mt-2">
-                  {sectionStatus.progress.completed} of {sectionStatus.progress.total} sections completed
-                  {sectionStatus.progress.failed > 0 && ` (${sectionStatus.progress.failed} failed)`}
-                </p>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center">
-                <Loader size={40} className="text-blue-500 animate-spin mb-3" />
-                <p className="text-sm text-gray-600 mb-1">
-                  Starting analysis...
-                </p>
-                <p className="text-xs text-gray-500 mt-2">This may take a few minutes</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="w-full px-4 py-8">
@@ -2573,7 +2657,7 @@ const TenderSummary = () => {
 
               <nav className="py-4 pr-1">
                 <div className="space-y-1">
-                  {TABS.map(tab => {
+                  {visibleTabs.map(tab => {
                     const isActive = activeTab === tab.id;
                     const { status, hasData } = getSectionStatus(tab.id);
                     const showReanalyzeButton = tab.id !== 'tender_summary' && tab.id !== 'submission';

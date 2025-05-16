@@ -1,12 +1,30 @@
 import React from 'react';
-import { TenderStatus } from '../../types';
 
 interface StatusBadgeProps {
-  status: TenderStatus;
+  status: string;
+  color?: 'red' | 'blue' | 'yellow' | 'green' | 'gray';
 }
 
-const StatusBadge = ({ status }: StatusBadgeProps) => {
+const StatusBadge = ({ status, color }: StatusBadgeProps) => {
   const getStatusStyles = () => {
+    if (color) {
+      switch (color) {
+        case 'red':
+          return 'bg-red-100 text-red-800';
+        case 'blue':
+          return 'bg-blue-100 text-blue-800';
+        case 'yellow':
+          return 'bg-amber-100 text-amber-800';
+        case 'green':
+          return 'bg-green-100 text-green-800';
+        case 'gray':
+          return 'bg-gray-100 text-gray-800';
+        default:
+          return 'bg-gray-100 text-gray-800';
+      }
+    }
+
+    // Default status styles if no color is provided
     switch (status) {
       case 'Draft':
         return 'bg-gray-100 text-gray-800';
@@ -18,6 +36,10 @@ const StatusBadge = ({ status }: StatusBadgeProps) => {
         return 'bg-red-100 text-red-800';
       case 'Won':
         return 'bg-green-100 text-green-800';
+      case 'Mandatory':
+        return 'bg-red-100 text-red-800';
+      case 'Optional':
+        return 'bg-blue-100 text-blue-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
