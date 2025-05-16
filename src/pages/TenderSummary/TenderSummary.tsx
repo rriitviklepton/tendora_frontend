@@ -28,7 +28,8 @@ import {
   AlertTriangle,
   RefreshCw,
   CheckCircle,
-  Loader
+  Loader,
+  Eye
 } from 'lucide-react';
 import StatusBadge from '../../components/UI/StatusBadge';
 import { getTimeRemaining, formatCurrency } from '../../utils/helpers';
@@ -39,76 +40,7 @@ declare global {
   }
 }
 
-interface TenderInfo {
-  scopeOfWork: {
-    contentType: string;
-    description: string | null;
-    listItems: string[] | null;
-    tableData: {
-      headers: string[] | null;
-      rows: any[] | null;
-    } | null;
-  };
-  tenderSummary: {
-    title: string | null;
-    tenderNumber: string | null;
-    issuingAuthority: string | null;
-    tenderMode: string | null;
-    portalLink: string | null;
-  };
-  importantDates: Array<{
-    event: string;
-    dateTime: string;
-    notesLocation: string | null;
-  }>;
-  evaluationCriteria: {
-    technicalEvaluation: Array<{
-      criteriaParameter: string;
-      maxMarksWeightage: string;
-      subCriteriaNotes: string;
-    }>;
-    minimumTechnicalScore: string;
-    financialEvaluation: string;
-  };
-  eligibilityConditions: Array<{
-    itemText: string | null;
-    formatHint: 'list_item' | 'table_block' | 'text';
-    tableData: {
-      headers: string[] | null;
-      rows: any[] | null;
-    } | null;
-  }>;
-  financialRequirements: Array<{
-    itemText: string | null;
-    formatHint: 'list_item' | 'table_block' | 'text';
-    tableData: {
-      headers: string[] | null;
-      rows: any[] | null;
-    } | null;
-  }>;
-  annexuresAttachmentsRequired: Array<{
-    nameNumber: string | null;
-    purposeDescription: string | null;
-    formatSpecificInstructions: string | null;
-    submissionNote: string | null;
-  }> | null;
-  billOfQuantities: Array<{
-    itemText: string | null;
-    formatHint: 'list_item' | 'table_block' | 'text';
-    tableData: {
-      headers: string[] | null;
-      rows: any[] | null;
-    } | null;
-  }>;
-  conditionsOfContract: Array<{
-    itemText: string | null;
-    formatHint: 'list_item' | 'table_block' | 'text';
-    tableData: {
-      headers: string[] | null;
-      rows: any[] | null;
-    } | null;
-  }>;
-}
+
 
 interface TenderData {
   status: string;
@@ -132,6 +64,35 @@ interface Document {
   timestamp: string;
   category: string;
   tender_id?: number;
+}
+
+interface ComplianceRequirement {
+  clause_number: string | null;
+  requirement: string | null;
+  compliance_type: string | null;
+  supporting_documents_needed: string[] | null;
+  evaluation_impact: {
+    is_mandatory: boolean;
+    disqualification_risk: boolean;
+    evaluation_weightage: number | null;
+  };
+  submission_details: {
+    submission_format: string | null;
+    submission_stage: string | null;
+    special_instructions: string | null;
+  };
+  compliance_matrix: {
+    headers: string[];
+    rows: Array<{
+      clause_no: string;
+      description: string;
+      type: string;
+      documents: string | null;
+      format: string;
+      is_mandatory: string;
+      remarks: string | null;
+    }>;
+  };
 }
 
 interface DocumentExplorerModalProps {
@@ -168,6 +129,7 @@ const sectionApiMapping: SectionMapping = {
   'financial': 'financial_requirements',
   'boq': 'bill_of_quantities',
   'conditions': 'conditions_of_contract',
+  'compliance': 'compliance_requirements',
   'dates': 'important_dates',
   'submission': 'annexures_attachments',
   'evaluation': 'evaluation_criteria',
@@ -244,6 +206,7 @@ const TABS = [
   { id: 'financial', name: 'Financial Evaluation', icon: DollarSign },
   { id: 'boq', name: 'Bill of Quantities', icon: Calculator },
   { id: 'conditions', name: 'Contract Conditions', icon: FileText },
+  { id: 'compliance', name: 'Compliance', icon: CheckSquare },
   { id: 'dates', name: 'Key Dates', icon: CalendarIcon },
   { id: 'submission', name: 'Submission', icon: SendToBack },
 ];
@@ -394,6 +357,7 @@ interface DocumentRow {
 interface TableData {
   headers: string[] | string;
   rows: any[] | string;
+  table_name?: string;
 }
 
 interface ContentItem {
@@ -425,6 +389,247 @@ interface SectionStatus {
   };
 }
 
+interface TenderInfo {
+  scopeOfWork: {
+    contentType: string;
+    description: string | null;
+    listItems: string[] | null;
+    tableData: {
+      headers: string[] | null;
+      rows: any[] | null;
+    } | null;
+  };
+  tenderSummary: {
+    title: string | null;
+    tenderNumber: string | null;
+    issuingAuthority: string | null;
+    tenderMode: string | null;
+    portalLink: string | null;
+    financial_requirements: {
+      emd: {
+        amount: string | null;
+        payment_mode: string | null;
+        validity_period: string | null;
+        exemptions: string | null;
+        refund_terms: string | null;
+      };
+      tender_fee: {
+        amount: string | null;
+        payment_mode: string | null;
+        is_refundable: boolean | null;
+        exemptions: string | null;
+      };
+      estimated_value: string | null;
+    };
+  };
+  importantDates: Array<{
+    event: string;
+    dateTime: string;
+    notesLocation: string | null;
+  }>;
+  evaluationCriteria: {
+    evaluationStages: string | null;
+    eligibilityQualifyingCriteria: string | null;
+    technicalEvaluation: Array<{
+      criteriaParameter: string;
+      maxMarksWeightage: string;
+      subCriteriaNotes: string;
+    }>;
+    minimumTechnicalScore: string;
+    financialEvaluation: string;
+    overallSelectionMethod: string | null;
+  };
+  eligibilityConditions: Array<{
+    itemText: string | null;
+    formatHint: 'list_item' | 'table_block' | 'text';
+    tableData: {
+      headers: string[] | null;
+      rows: any[] | null;
+    } | null;
+  }>;
+  financialRequirements: Array<{
+    itemText: string | null;
+    formatHint: 'list_item' | 'table_block' | 'text';
+    tableData: {
+      headers: string[] | null;
+      rows: any[] | null;
+    } | null;
+  }>;
+  annexuresAttachmentsRequired: Array<{
+    nameNumber: string | null;
+    purposeDescription: string | null;
+    formatSpecificInstructions: string | null;
+    submissionNote: string | null;
+  }> | null;
+  billOfQuantities: Array<{
+    itemText: string | null;
+    formatHint: 'list_item' | 'table_block' | 'text';
+    tableData: {
+      headers: string[] | null;
+      rows: any[] | null;
+    } | null;
+  }>;
+  conditionsOfContract: Array<{
+    itemText: string | null;
+    formatHint: 'list_item' | 'table_block' | 'text';
+    tableData: {
+      headers: string[] | null;
+      rows: any[] | null;
+    } | null;
+  }>;
+  complianceRequirements: Array<{
+    clause_number: string | null;
+    requirement: string | null;
+    compliance_type: string | null;
+    supporting_documents_needed: string[] | null;
+    evaluation_impact: {
+      is_mandatory: boolean;
+      disqualification_risk: boolean;
+      evaluation_weightage: number | null;
+    };
+    submission_details: {
+      submission_format: string | null;
+      submission_stage: string | null;
+      special_instructions: string | null;
+    };
+    compliance_matrix: {
+      headers: string[];
+      rows: Array<{
+        clause_no: string;
+        description: string;
+        type: string;
+        documents: string | null;
+        format: string;
+        is_mandatory: string;
+        remarks: string | null;
+      }>;
+    };
+  }>;
+}
+
+// Add these type definitions at the top of the file
+type ComplianceStatus = 'Mandatory' | 'Optional';
+type ComplianceStatusColor = 'red' | 'blue' | 'yellow' | 'green' | 'gray';
+
+interface ComplianceMatrixRow {
+  clause_no: string;
+  description: string;
+  type: string;
+  documents: string | null;
+  format: string;
+  is_mandatory: string;
+  remarks: string | null;
+}
+
+// Update the StatusBadge component props
+interface StatusBadgeProps {
+  status: string;
+  color: 'red' | 'blue' | 'yellow' | 'green' | 'gray';
+}
+
+// Update the TenderStatus type to include compliance statuses
+type TenderStatus = string;
+
+// Add new interfaces for the modals
+interface FinancialDetailsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  details: {
+    amount: string | null;
+    payment_mode: string | null;
+    validity_period?: string | null;
+    is_refundable?: boolean | null;
+    exemptions: string | null;
+    refund_terms?: string | null;
+  };
+}
+
+// Add the FinancialDetailsModal component
+const FinancialDetailsModal: React.FC<FinancialDetailsModalProps> = ({
+  isOpen,
+  onClose,
+  title,
+  details
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg w-full max-w-2xl">
+        {/* Modal Header */}
+        <div className="flex justify-between items-center p-6 border-b">
+          <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
+          {/* <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+            <X size={24} />
+          </button> */}
+        </div>
+
+        {/* Modal Content */}
+        <div className="p-6">
+          <div className="space-y-6">
+            {/* Main Details */}
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <h3 className="text-sm font-medium text-gray-500 mb-1">Amount</h3>
+                <p className="text-base text-gray-900">{details.amount || 'Not specified'}</p>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-gray-500 mb-1">Payment Mode</h3>
+                <p className="text-base text-gray-900">{details.payment_mode || 'Not specified'}</p>
+              </div>
+              {details.validity_period !== undefined && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500 mb-1">Validity Period</h3>
+                  <p className="text-base text-gray-900">{details.validity_period || 'Not specified'}</p>
+                </div>
+              )}
+              {details.is_refundable !== undefined && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500 mb-1">Refundable</h3>
+                  <p className="text-base text-gray-900">{details.is_refundable ? 'Yes' : 'No'}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Additional Details */}
+            {(details.exemptions || details.refund_terms) && (
+              <div className="border-t border-gray-200 pt-6 mt-6">
+                {details.exemptions && (
+                  <div className="mb-6">
+                    <h3 className="text-sm font-medium text-gray-500 mb-2">Exemptions</h3>
+                    <p className="text-base text-gray-900 bg-gray-50 p-4 rounded-lg">
+                      {details.exemptions}
+                    </p>
+                  </div>
+                )}
+                {details.refund_terms && (
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 mb-2">Refund Terms</h3>
+                    <p className="text-base text-gray-900 bg-gray-50 p-4 rounded-lg">
+                      {details.refund_terms}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Modal Footer */}
+        <div className="flex justify-end p-6 border-t">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const TenderSummary = () => {
   console.log('TenderSummary component rendering');
   const { id } = useParams<{ id: string }>();
@@ -449,6 +654,10 @@ const TenderSummary = () => {
   const [reanalyzingSection, setReanalyzingSection] = useState<string | null>(null);
   const [sectionStatus, setSectionStatus] = useState<SectionStatus | null>(null);
 
+  // Add state for modals
+  const [isEmdModalOpen, setIsEmdModalOpen] = useState(false);
+  const [isTenderFeeModalOpen, setIsTenderFeeModalOpen] = useState(false);
+
   // React Query hooks for each section
   const scopeQuery = useSectionDetails(id || '', 'scope_of_work', orgName || undefined);
   const tenderSummaryQuery = useSectionDetails(id || '', 'tender_summary', orgName || undefined);
@@ -469,6 +678,7 @@ const TenderSummary = () => {
   const financialQuery = useSectionDetails(id || '', 'financial_requirements', orgName || undefined);
   const boqQuery = useSectionDetails(id || '', 'bill_of_quantities', orgName || undefined);
   const conditionsQuery = useSectionDetails(id || '', 'conditions_of_contract', orgName || undefined);
+  const complianceQuery = useSectionDetails(id || '', 'compliance_requirements', orgName || undefined);
   const datesQuery = useSectionDetails(id || '', 'important_dates', orgName || undefined);
   const annexuresQuery = useSectionDetails(id || '', 'annexures_attachments', orgName || undefined);
 
@@ -488,6 +698,7 @@ const TenderSummary = () => {
     financialQuery,
     boqQuery,
     conditionsQuery,
+    complianceQuery,
     datesQuery,
     annexuresQuery
   ].some(query => query.isLoading);
@@ -502,6 +713,7 @@ const TenderSummary = () => {
     financialQuery,
     boqQuery,
     conditionsQuery,
+    complianceQuery,
     datesQuery,
     annexuresQuery
   ].some(query => query.isError);
@@ -1087,9 +1299,17 @@ const TenderSummary = () => {
       return String(cell);
     };
 
+    // Get table name if available
+    const tableName = 'table_name' in tableData ? tableData.table_name : null;
+
     return (
       <div className="mt-6">
-        <h4 className="text-sm font-medium text-gray-700 mb-3">Detailed Information</h4>
+        {tableName && (
+          <h4 className="text-base font-medium text-gray-900 mb-3">{tableName}</h4>
+        )}
+        {!tableName && (
+          <h4 className="text-sm font-medium text-gray-700 mb-3">Detailed Information</h4>
+        )}
         <div className="overflow-x-auto border border-gray-200 rounded-lg">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -1106,7 +1326,7 @@ const TenderSummary = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {rows.map((row, rowIndex) => (
-                <tr key={rowIndex}>
+                <tr key={rowIndex} className="hover:bg-gray-50">
                   {Array.isArray(row) ? (
                     row.map((cell, cellIndex) => (
                       <td 
@@ -1589,6 +1809,125 @@ const TenderSummary = () => {
     );
   };
 
+  const renderComplianceRequirements = () => {
+    if (complianceQuery.isLoading) return <div>Loading...</div>;
+    if (complianceQuery.isError) return <div>Error loading compliance requirements</div>;
+    
+    const complianceData = complianceQuery.data?.processed_section as ComplianceRequirement[];
+    if (!complianceData || !Array.isArray(complianceData)) return null;
+
+    return (
+      <div className="space-y-6">
+        <h3 className="text-lg font-medium text-gray-900">Compliance Requirements</h3>
+        
+        {complianceData.map((item: ComplianceRequirement, index: number) => (
+          <div key={index} className="bg-white rounded-lg border border-gray-200 p-4 space-y-4">
+            {/* Requirement Header */}
+            <div className="flex justify-between items-start">
+              <div className="flex-1">
+                <h4 className="text-base font-medium text-gray-900">
+                  {item.clause_number && <span className="text-gray-500 mr-2">[{item.clause_number}]</span>}
+                  {item.requirement}
+                </h4>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-sm text-gray-600">{item.compliance_type}</span>
+                  {item.evaluation_impact.disqualification_risk && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                      Disqualification Risk
+                    </span>
+                  )}
+                </div>
+              </div>
+              <StatusBadge 
+                status={item.evaluation_impact.is_mandatory ? "Mandatory" : "Optional"}
+                color={item.evaluation_impact.is_mandatory ? "red" : "blue"}
+              />
+            </div>
+
+            {/* Supporting Documents */}
+            {item.supporting_documents_needed && (
+              <div className="mt-3">
+                <h5 className="text-sm font-medium text-gray-900 mb-2">Required Documents:</h5>
+                <div className="text-sm text-gray-600">
+                  {Array.isArray(item.supporting_documents_needed) ? (
+                    <ul className="list-disc list-inside space-y-1">
+                      {item.supporting_documents_needed.map((doc: string, docIndex: number) => (
+                        <li key={docIndex}>{doc}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p>{item.supporting_documents_needed}</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Submission Details */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-gray-50 p-3 rounded">
+                <p className="text-xs text-gray-500">Submission Format</p>
+                <p className="text-sm font-medium">{item.submission_details.submission_format || 'Not specified'}</p>
+              </div>
+              <div className="bg-gray-50 p-3 rounded">
+                <p className="text-xs text-gray-500">Submission Stage</p>
+                <p className="text-sm font-medium">{item.submission_details.submission_stage || 'Not specified'}</p>
+              </div>
+              {item.evaluation_impact.evaluation_weightage !== null && (
+                <div className="bg-gray-50 p-3 rounded">
+                  <p className="text-xs text-gray-500">Evaluation Weightage</p>
+                  <p className="text-sm font-medium">{item.evaluation_impact.evaluation_weightage}%</p>
+                </div>
+              )}
+            </div>
+
+            {/* Special Instructions */}
+            {item.submission_details.special_instructions && (
+              <div className="bg-yellow-50 border border-yellow-100 p-3 rounded">
+                <p className="text-sm text-yellow-800">
+                  <span className="font-medium">Special Instructions: </span>
+                  {item.submission_details.special_instructions}
+                </p>
+              </div>
+            )}
+
+            {/* Compliance Matrix */}
+            {item.compliance_matrix && (
+              <div className="mt-4 overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      {item.compliance_matrix.headers.map((header: string, headerIndex: number) => (
+                        <th 
+                          key={headerIndex}
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        >
+                          {header}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {item.compliance_matrix.rows.map((row: ComplianceMatrixRow, rowIndex: number) => (
+                      <tr key={rowIndex} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{row.clause_no}</td>
+                        <td className="px-6 py-4 text-sm text-gray-500">{row.description}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{row.type}</td>
+                        <td className="px-6 py-4 text-sm text-gray-500">{row.documents || '-'}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{row.format}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{row.is_mandatory}</td>
+                        <td className="px-6 py-4 text-sm text-gray-500">{row.remarks || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   const renderImportantDates = () => {
     if (datesQuery.isLoading) return <div>Loading...</div>;
     if (datesQuery.isError) return <div>Error loading important dates</div>;
@@ -1648,44 +1987,191 @@ const TenderSummary = () => {
             <div className="flex justify-end">
               <button
                 onClick={handleBulkAIRecommendations}
-              disabled={bulkLoading}
-              className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white ${
-                bulkLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-700'
-              } shadow-sm transition-colors`}
-            >
-              {bulkLoading ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
-                  Processing... ({bulkProgress.completed}/{bulkProgress.total})
-                </>
-              ) : (
-                <>
-                  <Info size={16} className="mr-2" />
-                  Get AI Recommendations for All
-                </>
-              )}
-            </button>
-          </div>
-        )}
+                disabled={bulkLoading}
+                className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white ${
+                  bulkLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-700'
+                } shadow-sm transition-colors`}
+              >
+                {bulkLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
+                    Processing... ({bulkProgress.completed}/{bulkProgress.total})
+                  </>
+                ) : (
+                  <>
+                    <Info size={16} className="mr-2" />
+                    Get AI Recommendations for All
+                  </>
+                )}
+              </button>
+            </div>
+          )}
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Document</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Purpose</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Format Instructions</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Submission Note</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Document Details</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Submission Requirements</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Applicability</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {annexuresQuery.data.processed_section.map((doc: DocumentRow, index: number) => renderDocumentRow(doc, index))}
+              {annexuresQuery.data.processed_section.map((doc: any, index: number) => (
+                <tr key={index} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 text-sm font-medium text-gray-700">
+                    {doc.document_category || '-'}
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="text-sm text-gray-900 font-medium">{doc.document_details.name || '-'}</div>
+                    {doc.document_details.reference_number && (
+                      <div className="text-sm text-gray-500">Ref: {doc.document_details.reference_number}</div>
+                    )}
+                    {doc.document_details.description && (
+                      <div className="text-sm text-gray-600 mt-1">{doc.document_details.description}</div>
+                    )}
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {doc.document_details.is_mandatory && (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          Mandatory
+                        </span>
+                      )}
+                      {doc.document_details.stage_required && (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          {doc.document_details.stage_required}
+                        </span>
+                      )}
+                      {doc.document_details.submission_format.format_type && (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                          {doc.document_details.submission_format.format_type}
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-500">
+                    <div className="space-y-1">
+                      {doc.submission_requirements.deadline && (
+                        <div>Deadline: {doc.submission_requirements.deadline}</div>
+                      )}
+                      {doc.submission_requirements.submission_mode && (
+                        <div>Mode: {doc.submission_requirements.submission_mode}</div>
+                      )}
+                      {doc.submission_requirements.submission_location && (
+                        <div>Location: {doc.submission_requirements.submission_location}</div>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-500">
+                    <div className="space-y-1">
+                      {doc.applicability.applicable_to && (
+                        <div>For: {doc.applicability.applicable_to}</div>
+                      )}
+                      {doc.applicability.exemptions && (
+                        <div className="text-amber-600">
+                          Exemptions: {doc.applicability.exemptions}
+                        </div>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${
+                      uploadedDocuments[index]
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {uploadedDocuments[index] ? 'Attached' : 'Pending'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {uploadedDocuments[index] ? (
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm text-gray-600 truncate max-w-xs">
+                          {documents.find(d => d.file_id === uploadedDocuments[index])?.filename}
+                        </span>
+                        <button 
+                          onClick={() => handleDocumentSelect(index, undefined)}
+                          className="text-red-600 hover:text-red-800 flex-shrink-0"
+                          title="Remove document"
+                        >
+                          <XCircle size={16} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => setModalOpen(index)}
+                          className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                          title="Select existing document"
+                        >
+                          <File size={16} className="mr-1" />
+                          Select
+                        </button>
+
+                        <div className="relative">
+                          <input
+                            type="file"
+                            id={`file-upload-${index}`}
+                            className="hidden"
+                            onChange={(e) => handleFileUpload(e, index)}
+                            disabled={uploading !== null}
+                            accept=".pdf,.doc,.docx,.xls,.xlsx,.txt"
+                          />
+                          <label
+                            htmlFor={`file-upload-${index}`}
+                            className={`inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium ${
+                              uploading === index
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                : 'text-gray-700 bg-white hover:bg-gray-50 cursor-pointer'
+                            }`}
+                            title="Upload new document"
+                          >
+                            {uploading === index ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-500 border-t-transparent mr-1" />
+                                Uploading...
+                              </>
+                            ) : (
+                              <>
+                                <Upload size={16} className="mr-1" />
+                                Upload
+                              </>
+                            )}
+                          </label>
+                        </div>
+
+                        <button
+                          onClick={() => handleGetAIRecommendation(index)}
+                          disabled={loadingRecommendation !== null || uploading !== null}
+                          className={`inline-flex items-center px-3 py-2 border border-transparent rounded-md text-sm font-medium ${
+                            loadingRecommendation !== null || uploading !== null
+                              ? 'bg-gray-400 text-white cursor-not-allowed'
+                              : 'bg-purple-600 text-white hover:bg-purple-700'
+                          }`}
+                          title="Get AI recommendation"
+                        >
+                          {loadingRecommendation === index ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-1" />
+                              Analyzing...
+                            </>
+                          ) : (
+                            <>
+                              <Info size={16} className="mr-1" />
+                              Suggest
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
-        
       </div>
     );
   };
@@ -1819,6 +2305,8 @@ const TenderSummary = () => {
         return renderBillOfQuantities();
       case 'conditions':
         return renderContractConditions();
+      case 'compliance':
+        return renderComplianceRequirements();
       case 'dates':
         return renderImportantDates();
       case 'submission':
@@ -1961,6 +2449,92 @@ const TenderSummary = () => {
                     {tenderSummaryData.tenderMode}
                   </span>
                 </div>
+
+                {/* Financial Requirements Section */}
+                {tenderSummaryData.financial_requirements && (
+                  <div className="mt-2 space-y-0 flex flex-row gap-2">
+                    {/* EMD Details */}
+                    <div className=" p-0 rounded-lg">
+                      <div className="flex items-center">
+                        <div className="flex items-center gap-3">
+                          <h3 className="text-base font-semibold text-gray-900">EMD Details</h3>
+                        </div>
+                        <button
+                          onClick={() => setIsEmdModalOpen(true)}
+                          className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors flex items-center gap-2"
+                          title="View complete EMD details"
+                        >
+                          
+                          <Eye size={20} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Tender Fee Details */}
+                    <div className=" p-0 rounded-lg">
+                      <div className="flex items-center">
+                        <div className="flex items-center gap-3">
+                          <h3 className="text-base font-semibold text-gray-900">Tender Fee Details</h3>
+                          
+                        </div>
+                        <button
+                          onClick={() => setIsTenderFeeModalOpen(true)}
+                          className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors flex items-center gap-2"
+                          title="View complete tender fee details"
+                        >
+                          
+                          <Eye size={20} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Update the FinancialDetailsModal component to show all details in a better layout */}
+                    <FinancialDetailsModal
+                      isOpen={isEmdModalOpen}
+                      onClose={() => setIsEmdModalOpen(false)}
+                      title="EMD Details"
+                      details={{
+                        amount: tenderSummaryData.financial_requirements.emd.amount,
+                        payment_mode: tenderSummaryData.financial_requirements.emd.payment_mode,
+                        validity_period: tenderSummaryData.financial_requirements.emd.validity_period,
+                        exemptions: tenderSummaryData.financial_requirements.emd.exemptions,
+                        refund_terms: tenderSummaryData.financial_requirements.emd.refund_terms
+                      }}
+                    />
+
+                    <FinancialDetailsModal
+                      isOpen={isTenderFeeModalOpen}
+                      onClose={() => setIsTenderFeeModalOpen(false)}
+                      title="Tender Fee Details"
+                      details={{
+                        amount: tenderSummaryData.financial_requirements.tender_fee.amount,
+                        payment_mode: tenderSummaryData.financial_requirements.tender_fee.payment_mode,
+                        is_refundable: tenderSummaryData.financial_requirements.tender_fee.is_refundable,
+                        exemptions: tenderSummaryData.financial_requirements.tender_fee.exemptions
+                      }}
+                    />
+
+                    {/* Estimated Value */}
+                    {tenderSummaryData.financial_requirements.estimated_value && (
+                      <div className="p-0 rounded-lg">
+                        <div className="flex items-center">
+                          <div className="flex items-center gap-3">
+                            <h3 className="text-base font-semibold text-gray-900">Estimated Value</h3>
+                          </div>
+                          <button
+                            className="p-1 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors flex items-center gap-2"
+                            title="View estimated value"
+                          >
+                            <span className="text-base text-gray-900">
+                              {tenderSummaryData.financial_requirements.estimated_value}
+                            </span>
+                            
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
               
               <div className="flex flex-col items-end space-y-2">
