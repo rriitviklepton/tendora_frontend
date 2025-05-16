@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, FileType, Loader, AlertCircle, CheckCircle, Building, XCircle } from 'lucide-react';
+import { Upload, FileType, Loader, AlertCircle, CheckCircle, Building, XCircle, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface Section {
@@ -276,9 +276,20 @@ const UploadArea = () => {
         sectionStatus ? (
           <div className="flex flex-col items-center w-full max-w-2xl mx-auto">
             <Loader size={40} className="text-blue-500 animate-spin mb-3" />
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-gray-600 mb-2">
               Analyzing tender document... ({sectionStatus.progress.completion_percentage.toFixed(1)}% complete)
             </p>
+            {sectionStatus.sections['tender_summary']?.status === 'success' && (
+              <button
+                onClick={() => navigate(`/tender/${sectionStatus.tender_id}`, {
+                  state: { org_name: orgName.trim() }
+                })}
+                className="mx-4 px-4 py-2 mb-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
+              >
+                <span>View Tender</span>
+                <ArrowRight size={16} />
+              </button>
+            )}
             
             <div className="w-full space-y-2">
               {Object.entries(sectionStatus.sections)
@@ -315,6 +326,9 @@ const UploadArea = () => {
               {sectionStatus.progress.completed} of {sectionStatus.progress.total} sections completed
               {sectionStatus.progress.failed > 0 && ` (${sectionStatus.progress.failed} failed)`}
             </p>
+
+            {/* Add View Tender button when tender_summary is successful */}
+            
           </div>
         ) : (
           <div className="flex flex-col items-center">

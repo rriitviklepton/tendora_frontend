@@ -663,7 +663,6 @@ const TenderSummary = () => {
   console.log('TenderSummary component rendering');
   const { id } = useParams<{ id: string }>();
   console.log('Tender ID:', id);
-  const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('scope');
@@ -679,13 +678,15 @@ const TenderSummary = () => {
   const [analyzing, setAnalyzing] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [originalTenderName, setOriginalTenderName] = useState<string | null>(null);
-  const [orgName, setOrgName] = useState<string | null>(location.state?.org_name || null);
+  const [orgName] = useState<string>('lepton'); // Hardcoded to lepton
   const [reanalyzingSection, setReanalyzingSection] = useState<string | null>(null);
   const [sectionStatus, setSectionStatus] = useState<SectionStatus | null>(null);
   const [isNavCollapsed, setIsNavCollapsed] = useState(false);
   const [isEmdModalOpen, setIsEmdModalOpen] = useState(false);
   const [isTenderFeeModalOpen, setIsTenderFeeModalOpen] = useState(false);
   const [isPolling, setIsPolling] = useState(false);
+  const [assignments, setAssignments] = useState<{ [key: number]: string }>({});
+  const [editingAssignment, setEditingAssignment] = useState<number | null>(null);
 
   // React Query hooks for each section - enable only when needed
   const scopeQuery = useSectionDetails(
@@ -853,6 +854,8 @@ const TenderSummary = () => {
         case 'conditions': return conditionsQuery;
         case 'dates': return datesQuery;
         case 'submission': return annexuresQuery;
+        case 'evaluation': return evaluationQuery;
+        case 'compliance': return complianceQuery;
         default: return null;
       }
     };
@@ -906,33 +909,59 @@ const TenderSummary = () => {
       try {
         const statusUrl = `http://127.0.0.1:8000/section-status?tender_id=${id}&user_id=123&org_name=lepton`;
         const response = await fetch(statusUrl);
+        if (!response.ok) {
+          throw new Error('Failed to fetch tender data');
+        }
         const data = await response.json();
         setSectionStatus(data);
+        setOriginalTenderName(data.tender_name);
         
-        // Check if any section is still analyzing
-        const hasAnalyzingSections = Object.values(data.sections).some(
-          (section: any) => section.status === 'analyzing'
+        // Check if any section needs polling (is analyzing or null)
+        const needsPolling = Object.values(data.sections).some(
+          (section: any) => section.status === 'analyzing' || section.status === null
         );
-        setIsPolling(hasAnalyzingSections);
+        setIsPolling(needsPolling);
       } catch (error) {
         console.error('Error fetching section status:', error);
+        setError(error instanceof Error ? error.message : 'An error occurred');
+      } finally {
+        setLoading(false);
       }
     };
 
+    // Initial fetch
     fetchSectionStatus();
-  }, [id]);
+
+    // Set up polling interval
+    const pollInterval = setInterval(() => {
+      if (isPolling) {
+        fetchSectionStatus();
+      }
+    }, POLLING_INTERVAL);
+
+    // Cleanup function
+    return () => {
+      clearInterval(pollInterval);
+    };
+  }, [id, isPolling]); // Added isPolling to dependencies
 
   // Update checkAllSectionsFailed to use sectionStatus
   const checkAllSectionsFailed = () => {
     if (!sectionStatus?.sections) return false;
     
-    // Check if any sections are still analyzing or not started
-    const hasUnfinishedSections = Object.values(sectionStatus.sections).some(
-      (section: any) => section.status === 'analyzing' || section.status === null
-    );
-
-    // If there are unfinished sections, we should show the analysis UI
-    return hasUnfinishedSections;
+    // Get the status of scope of work and tender summary sections
+    const scopeStatus = sectionStatus.sections['scope_of_work']?.status;
+    const summaryStatus = sectionStatus.sections['tender_summary']?.status;
+    
+    // Show analyzing state if either:
+    // 1. Both sections are in analyzing state
+    // 2. One section is analyzing and other is null (not analyzed yet)
+    // 3. Both sections are null (not analyzed yet)
+    return (scopeStatus === 'analyzing' || scopeStatus === null) && 
+           (summaryStatus === 'analyzing' || summaryStatus === null) &&
+           // At least one section should be analyzing or both should be null
+           (scopeStatus === 'analyzing' || summaryStatus === 'analyzing' || 
+            (scopeStatus === null && summaryStatus === null));
   };
 
   // Function to trigger analysis
@@ -965,39 +994,6 @@ const TenderSummary = () => {
       setAnalyzing(false);
     }
   };
-
-  useEffect(() => {
-    const fetchTenderData = async () => {
-      try {
-        // Create the URL with required parameters and optional org_name
-        let url = `http://localhost:8000/complete-tender-details?tender_id=${id}&user_id=123`;
-        if (orgName) {
-          url += `&org_name=${encodeURIComponent(orgName)}`;
-        }
-        
-        // First, check if the tender has already been analyzed
-        const response = await fetch(url);
-        if (!response.ok) {
-          throw new Error('Failed to fetch tender data');
-        }
-        
-        const data: TenderData = await response.json();
-        
-        if (data.status === 'success') {
-          // Set organization name from response if available
-          if (data.org_name && !orgName) {
-            setOrgName(data.org_name);
-          }
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTenderData();
-  }, [id, orgName, location.state]);
 
   useEffect(() => {
     const fetchDocuments = async () => {
@@ -1568,6 +1564,15 @@ const TenderSummary = () => {
         <div className="flex flex-col items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent mb-4"></div>
           <p className="text-gray-600">This section is being analyzed...</p>
+        </div>
+      );
+    }
+
+    if (sectionState === null) {
+      return (
+        <div className="flex flex-col items-center justify-center h-64">
+          <Clock size={32} className="text-gray-400 mb-4" />
+          <p className="text-gray-600">This section has not been analyzed yet</p>
         </div>
       );
     }
@@ -2179,6 +2184,7 @@ const TenderSummary = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Document Details</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Submission Requirements</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Applicability</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned To</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
               </tr>
@@ -2239,6 +2245,39 @@ const TenderSummary = () => {
                         </div>
                       )}
                     </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {editingAssignment === index ? (
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="text"
+                          value={assignments[index] || ''}
+                          onChange={(e) => {
+                            setAssignments(prev => ({
+                              ...prev,
+                              [index]: e.target.value
+                            }));
+                          }}
+                          onBlur={() => setEditingAssignment(null)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              setEditingAssignment(null);
+                            }
+                          }}
+                          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                          placeholder="Enter name"
+                          autoFocus
+                        />
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setEditingAssignment(index)}
+                        className="text-sm text-gray-500 hover:text-blue-600 flex items-center space-x-1"
+                      >
+                        <span>{assignments[index] || 'Click to assign'}</span>
+                        <Users size={14} className="ml-1" />
+                      </button>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${
@@ -2508,42 +2547,43 @@ const TenderSummary = () => {
                 </div>
 
                 {/* Financial Requirements Section */}
-                {tenderSummaryData.financial_requirements && (
+                {tenderSummaryData?.financial_requirements && (
                   <div className="mt-2 space-y-0 flex flex-row gap-2">
                     {/* EMD Details */}
-                    <div className=" p-0 rounded-lg">
-                      <div className="flex items-center">
-                        <div className="flex items-center gap-3">
-                          <h3 className="text-base font-semibold text-gray-900">EMD Details</h3>
+                    {tenderSummaryData.financial_requirements?.emd && (
+                      <div className=" p-0 rounded-lg">
+                        <div className="flex items-center">
+                          <div className="flex items-center gap-3">
+                            <h3 className="text-base font-semibold text-gray-900">EMD Details</h3>
+                          </div>
+                          <button
+                            onClick={() => setIsEmdModalOpen(true)}
+                            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors flex items-center gap-2"
+                            title="View complete EMD details"
+                          >
+                            <Eye size={20} />
+                          </button>
                         </div>
-                        <button
-                          onClick={() => setIsEmdModalOpen(true)}
-                          className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors flex items-center gap-2"
-                          title="View complete EMD details"
-                        >
-                          
-                          <Eye size={20} />
-                        </button>
                       </div>
-                    </div>
+                    )}
 
                     {/* Tender Fee Details */}
-                    <div className=" p-0 rounded-lg">
-                      <div className="flex items-center">
-                        <div className="flex items-center gap-3">
-                          <h3 className="text-base font-semibold text-gray-900">Tender Fee Details</h3>
-                          
+                    {tenderSummaryData.financial_requirements?.tender_fee && (
+                      <div className=" p-0 rounded-lg">
+                        <div className="flex items-center">
+                          <div className="flex items-center gap-3">
+                            <h3 className="text-base font-semibold text-gray-900">Tender Fee Details</h3>
+                          </div>
+                          <button
+                            onClick={() => setIsTenderFeeModalOpen(true)}
+                            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors flex items-center gap-2"
+                            title="View complete tender fee details"
+                          >
+                            <Eye size={20} />
+                          </button>
                         </div>
-                        <button
-                          onClick={() => setIsTenderFeeModalOpen(true)}
-                          className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors flex items-center gap-2"
-                          title="View complete tender fee details"
-                        >
-                          
-                          <Eye size={20} />
-                        </button>
                       </div>
-                    </div>
+                    )}
 
                     {/* Update the FinancialDetailsModal component to show all details in a better layout */}
                     <FinancialDetailsModal
@@ -2551,11 +2591,11 @@ const TenderSummary = () => {
                       onClose={() => setIsEmdModalOpen(false)}
                       title="EMD Details"
                       details={{
-                        amount: tenderSummaryData.financial_requirements.emd.amount,
-                        payment_mode: tenderSummaryData.financial_requirements.emd.payment_mode,
-                        validity_period: tenderSummaryData.financial_requirements.emd.validity_period,
-                        exemptions: tenderSummaryData.financial_requirements.emd.exemptions,
-                        refund_terms: tenderSummaryData.financial_requirements.emd.refund_terms
+                        amount: tenderSummaryData.financial_requirements?.emd?.amount ?? null,
+                        payment_mode: tenderSummaryData.financial_requirements?.emd?.payment_mode ?? null,
+                        validity_period: tenderSummaryData.financial_requirements?.emd?.validity_period ?? null,
+                        exemptions: tenderSummaryData.financial_requirements?.emd?.exemptions ?? null,
+                        refund_terms: tenderSummaryData.financial_requirements?.emd?.refund_terms ?? null
                       }}
                     />
 
@@ -2564,15 +2604,15 @@ const TenderSummary = () => {
                       onClose={() => setIsTenderFeeModalOpen(false)}
                       title="Tender Fee Details"
                       details={{
-                        amount: tenderSummaryData.financial_requirements.tender_fee.amount,
-                        payment_mode: tenderSummaryData.financial_requirements.tender_fee.payment_mode,
-                        is_refundable: tenderSummaryData.financial_requirements.tender_fee.is_refundable,
-                        exemptions: tenderSummaryData.financial_requirements.tender_fee.exemptions
+                        amount: tenderSummaryData.financial_requirements?.tender_fee?.amount ?? null,
+                        payment_mode: tenderSummaryData.financial_requirements?.tender_fee?.payment_mode ?? null,
+                        is_refundable: tenderSummaryData.financial_requirements?.tender_fee?.is_refundable ?? null,
+                        exemptions: tenderSummaryData.financial_requirements?.tender_fee?.exemptions ?? null
                       }}
                     />
 
                     {/* Estimated Value */}
-                    {tenderSummaryData.financial_requirements.estimated_value && (
+                    {tenderSummaryData.financial_requirements?.estimated_value && (
                       <div className="p-0 rounded-lg">
                         <div className="flex items-center">
                           <div className="flex items-center gap-3">
@@ -2585,7 +2625,6 @@ const TenderSummary = () => {
                             <span className="text-base text-gray-900">
                               {tenderSummaryData.financial_requirements.estimated_value}
                             </span>
-                            
                           </button>
                         </div>
                       </div>
