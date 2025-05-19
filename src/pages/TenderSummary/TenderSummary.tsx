@@ -29,10 +29,12 @@ import {
   RefreshCw,
   CheckCircle,
   Loader,
-  Eye
+  Eye,
+  Link
 } from 'lucide-react';
 import StatusBadge from '../../components/UI/StatusBadge';
 import { getTimeRemaining, formatCurrency } from '../../utils/helpers';
+import PDFViewer from '../../components/PDFViewer/PDFViewer';
 
 declare global {
   interface Window {
@@ -676,9 +678,7 @@ const getSectionState = (
 };
 
 const TenderSummary = () => {
-  console.log('TenderSummary component rendering');
   const { id } = useParams<{ id: string }>();
-  console.log('Tender ID:', id);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('table_of_contents');
@@ -694,7 +694,7 @@ const TenderSummary = () => {
   const [analyzing, setAnalyzing] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [originalTenderName, setOriginalTenderName] = useState<string | null>(null);
-  const [orgName] = useState<string>('lepton'); // Hardcoded to lepton
+  const [orgName] = useState<string>('lepton');
   const [reanalyzingSection, setReanalyzingSection] = useState<string | null>(null);
   const [sectionStatus, setSectionStatus] = useState<SectionStatus | null>(null);
   const [isNavCollapsed, setIsNavCollapsed] = useState(false);
@@ -704,14 +704,31 @@ const TenderSummary = () => {
   const [assignments, setAssignments] = useState<{ [key: number]: string }>({});
   const [editingAssignment, setEditingAssignment] = useState<number | null>(null);
   const [expandedTocSections, setExpandedTocSections] = useState<{ [key: number]: boolean }>({});
+  const [showPdf, setShowPdf] = useState(false);
+  const [currentPdfPage, setCurrentPdfPage] = useState<number | null>(null);
 
-  // React Query hooks for each section - enable only when needed
+  // Add PDF query near other queries
+  const pdfQuery = useQuery({
+    queryKey: ['tender-pdf', id],
+    queryFn: async () => {
+      if (!pdfUrl) return null;
+      const response = await fetch(pdfUrl);
+      const blob = await response.blob();
+      return URL.createObjectURL(blob);
+    },
+    enabled: !!pdfUrl,
+    staleTime: Infinity,
+    gcTime: 30 * 60 * 1000,
+  });
+
+  // React Query hooks for each section
   const scopeQuery = useSectionDetails(
     id || '', 
     'scope_of_work', 
     orgName || undefined, 
-    isSectionAccessible('scope', sectionStatus, sectionApiMapping)
+    isSectionAccessible('scope', sectionStatus, sectionApiMapping) && activeTab === 'scope'
   );
+  
   const tenderSummaryQuery = useSectionDetails(id || '', 'tender_summary', orgName || undefined, true); // Always enabled
   const eligibilityQuery = useSectionDetails(
     id || '', 
@@ -2550,7 +2567,17 @@ const TenderSummary = () => {
     setActiveTab(tabId);
   };
 
-  // Add render function for table of contents
+  // Add this function before renderTableOfContents
+  const handlePageClick = (pageNumber: string | undefined) => {
+    if (!pageNumber) return;
+    const page = parseInt(pageNumber, 10);
+    if (!isNaN(page)) {
+      setCurrentPdfPage(page);
+      setShowPdf(true);
+    }
+  };
+
+  // Update the renderTableOfContents function
   const renderTableOfContents = () => {
     if (tableOfContentsQuery.isLoading) {
       return (
@@ -2586,9 +2613,7 @@ const TenderSummary = () => {
           {data.map((section: TableOfContentsSection, index: number) => {
             const hasSubsections = section.subsections && section.subsections.length > 0;
             const expanded = expandedTocSections[index];
-            // Detect annexure by section.section_number or section.section_title
             const isAnnexure = (section.section_number || '').toLowerCase().includes('annexure') || (section.section_title || '').toLowerCase().includes('annexure');
-            // Extract annexure number if possible
             let annexureNumber = '';
             if (isAnnexure) {
               const match = (section.section_number || '').match(/Annexure\s*(\d+)/i);
@@ -2603,9 +2628,8 @@ const TenderSummary = () => {
                   <div className="flex items-center gap-3">
                     {/* Circle for section number or annexure */}
                     {isAnnexure ? (
-                      <div className="flex flex-col items-center justify-center w-10 h-10 rounded-full bg-blue-50 overflow-hidden">
-                        <span className="text-[10px] text-blue-500 leading-none font-semibold">Annexure</span>
-                        <span className="text-base font-bold text-blue-600 leading-none">{annexureNumber || section.section_number.replace(/Annexure/i, '').trim()}</span>
+                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-purple-50">
+                        <File size={18} className="text-purple-600" />
                       </div>
                     ) : (
                       <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-50">
@@ -2614,11 +2638,25 @@ const TenderSummary = () => {
                     )}
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-blue-600">{section.section_number}</span>
+                        {isAnnexure && (
+                          <span className="text-xs font-semibold text-purple-600">Annexure {annexureNumber}</span>
+                        )}
+                        {!isAnnexure && (
+                          <span className="text-xs font-semibold text-blue-600">{section.section_number}</span>
+                        )}
                         <h4 className="text-base font-medium text-gray-900">{section.section_title}</h4>
                       </div>
                       {section.page_number && (
-                        <span className="text-sm text-gray-500">Page {section.page_number}</span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePageClick(section.page_number);
+                          }}
+                          className="mt-1 inline-flex items-center text-sm text-blue-600 hover:text-blue-800 cursor-pointer"
+                        >
+                          <Link size={14} className="mr-1" />
+                          <span>Page {section.page_number}</span>
+                        </button>
                       )}
                     </div>
                   </div>
@@ -2651,9 +2689,16 @@ const TenderSummary = () => {
                           </span>
                         </div>
                         {subsection.page_number && (
-                          <span className="text-xs text-gray-500 group-hover:text-gray-700">
-                            Page {subsection.page_number}
-                          </span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handlePageClick(subsection.page_number);
+                            }}
+                            className="inline-flex items-center text-sm text-blue-600 hover:text-blue-800 cursor-pointer"
+                          >
+                            <Link size={14} className="mr-1" />
+                            <span>Page {subsection.page_number}</span>
+                          </button>
                         )}
                       </div>
                     ))}
@@ -2667,6 +2712,34 @@ const TenderSummary = () => {
     );
   };
 
+  // Update the right side buttons in the header section
+  const renderHeaderButtons = () => (
+    <div className="flex flex-col items-end space-y-2">
+      {pdfUrl && (
+        <>
+          <button
+            onClick={() => setShowPdf(!showPdf)}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors"
+          >
+            <Eye size={16} className="mr-2" />
+            {showPdf ? 'Show Content' : 'View PDF'}
+          </button>
+          {/* <a
+            href={pdfUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors"
+          >
+            <Download size={16} className="mr-2" />
+            Download PDF
+          </a> */}
+        </>
+      )}
+      {renderPortalLink(tenderSummaryData.portalLink)}
+    </div>
+  );
+
+  // Update the content area section to pass the currentPdfPage
   return (
     <div className="w-full px-4 py-8">
       <div className="mb-6">
@@ -2786,20 +2859,7 @@ const TenderSummary = () => {
                 )}
               </div>
               
-              <div className="flex flex-col items-end space-y-2">
-                {pdfUrl && (
-                  <a 
-                    href={pdfUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors"
-                  >
-                    <Download size={16} className="mr-2" />
-                    Download PDF
-                  </a>
-                )}
-                {renderPortalLink(tenderSummaryData.portalLink)}
-              </div>
+              {renderHeaderButtons()}
             </div>
           </div>
           
@@ -2884,12 +2944,14 @@ const TenderSummary = () => {
             </div>
 
             {/* Content Area */}
-            <div className="flex-1 overflow-auto p-6">
-              {renderActiveTabContent()}
+            <div className="flex-1 overflow-auto p-6" style={{ height: 'calc(100vh)' }}>
+              {showPdf && pdfQuery.data ? (
+                <PDFViewer pdfUrl={pdfQuery.data} initialPage={currentPdfPage} />
+              ) : (
+                renderActiveTabContent()
+              )}
             </div>
           </div>
-
-          {/* Remove the old tab content div since it's now part of the flex layout */}
         </div>
       </div>
       
