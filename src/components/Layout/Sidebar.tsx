@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { X, Home, FileText, FolderArchive, BarChart, Settings, Package, Send } from 'lucide-react';
+import { X, Home, FileText, FolderArchive, BarChart, Settings, Package, Send, FileSearch } from 'lucide-react';
 
 interface SidebarProps {
   open: boolean;
@@ -14,7 +14,8 @@ const Sidebar = ({ open, setOpen }: SidebarProps) => {
     { name: 'Dashboard', href: '/', icon: Home },
     { name: 'Tenders', href: '/tenders', icon: FileText },
     { name: 'Documents', href: '/documents', icon: FolderArchive },
-    { name: 'Submission', href: '/submission', icon: Send },
+    // { name: 'Submission', href: '/submission', icon: Send },
+    { name: 'OCR Convert', href: '/ocr-convert', icon: FileSearch },
     // { name: 'Analytics', href: '/analytics', icon: BarChart },
     { name: 'Settings', href: '/settings', icon: Settings },
   ];

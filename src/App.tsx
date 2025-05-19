@@ -9,6 +9,7 @@ import DocumentManager from './pages/DocumentManager/DocumentManager';
 import Settings from './pages/Settings/Settings';
 import Submission from './pages/Submission/Submission';
 import Analytics from './pages/Analytics/Analytics';
+import OCRConvert from './pages/OCRConvert';
 import { TenderProvider } from './context/TenderContext';
 
 // Create a client with better caching configuration
@@ -38,6 +39,7 @@ function App() {
               <Route path="submission" element={<Submission />} />
               <Route path="analytics" element={<Analytics />} />
               <Route path="settings" element={<Settings />} />
+              <Route path="ocr-convert" element={<OCRConvert />} />
             </Route>
           </Routes>
         </Router>
