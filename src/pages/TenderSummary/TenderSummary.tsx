@@ -677,6 +677,45 @@ const getSectionState = (
   return section?.status as SectionState;
 };
 
+// Add PDFViewerModal component before TenderSummary component
+interface PDFViewerModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  pdfUrl: string | null;
+  initialPage?: number | null;
+}
+
+const PDFViewerModal: React.FC<PDFViewerModalProps> = ({
+  isOpen,
+  onClose,
+  pdfUrl,
+  initialPage
+}) => {
+  if (!isOpen || !pdfUrl) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white w-[95vw] h-[95vh] flex flex-col rounded-lg shadow-2xl">
+        {/* Modal Header */}
+        <div className="flex justify-between items-center p-4 border-b bg-white rounded-t-lg">
+          <h2 className="text-lg font-semibold">Tender Document</h2>
+          <button 
+            onClick={onClose} 
+            className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-2 rounded-full transition-colors"
+          >
+            <X size={24} />
+          </button>
+        </div>
+
+        {/* PDF Viewer */}
+        <div className="flex-1 overflow-hidden">
+          <PDFViewer pdfUrl={pdfUrl} initialPage={initialPage} />
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const TenderSummary = () => {
   const { id } = useParams<{ id: string }>();
   const [loading, setLoading] = useState(true);
@@ -706,6 +745,7 @@ const TenderSummary = () => {
   const [expandedTocSections, setExpandedTocSections] = useState<{ [key: number]: boolean }>({});
   const [showPdf, setShowPdf] = useState(false);
   const [currentPdfPage, setCurrentPdfPage] = useState<number | null>(null);
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
 
   // Add PDF query near other queries
   const pdfQuery = useQuery({
@@ -2583,7 +2623,7 @@ const TenderSummary = () => {
     const page = parseInt(pageNumber, 10);
     if (!isNaN(page)) {
       setCurrentPdfPage(page);
-      setShowPdf(true);
+      setIsPdfModalOpen(true);
     }
   };
 
@@ -2728,28 +2768,19 @@ const TenderSummary = () => {
       {pdfUrl && (
         <>
           <button
-            onClick={() => setShowPdf(!showPdf)}
+            onClick={() => setIsPdfModalOpen(true)}
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors"
           >
             <Eye size={16} className="mr-2" />
-            {showPdf ? 'Show Content' : 'View PDF'}
+            View PDF
           </button>
-          {/* <a
-            href={pdfUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors"
-          >
-            <Download size={16} className="mr-2" />
-            Download PDF
-          </a> */}
         </>
       )}
       {renderPortalLink(tenderSummaryData.portalLink)}
     </div>
   );
 
-  // Update the content area section to pass the currentPdfPage
+  // Update the content area section to remove the PDF viewer condition
   return (
     <div className="w-full px-4 py-8">
       <div className="mb-6">
@@ -2955,17 +2986,24 @@ const TenderSummary = () => {
 
             {/* Content Area */}
             <div className="flex-1 overflow-auto p-6" style={{ height: 'calc(100vh)' }}>
-              {showPdf && pdfQuery.data ? (
-                <PDFViewer pdfUrl={pdfQuery.data} initialPage={currentPdfPage} />
-              ) : (
-                renderActiveTabContent()
-              )}
+              {renderActiveTabContent()}
             </div>
           </div>
         </div>
       </div>
       
-      {/* Add the modal at the end of the component */}
+      {/* Add PDF Modal */}
+      <PDFViewerModal
+        isOpen={isPdfModalOpen}
+        onClose={() => {
+          setIsPdfModalOpen(false);
+          setCurrentPdfPage(null);
+        }}
+        pdfUrl={typeof pdfQuery.data === 'string' ? pdfQuery.data : null}
+        initialPage={currentPdfPage}
+      />
+
+      {/* Document Explorer Modal */}
       {modalOpen !== null && id && (
         <DocumentExplorerModal
           isOpen={true}
