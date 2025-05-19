@@ -123,6 +123,7 @@ interface SectionResponse {
 
 // Update the section name mapping
 const sectionApiMapping: SectionMapping = {
+  'table_of_contents': 'table_of_contents',
   'scope': 'scope_of_work',
   'eligibility': 'eligibility_conditions',
   'technical': 'technical_requirements',
@@ -135,6 +136,20 @@ const sectionApiMapping: SectionMapping = {
   'evaluation': 'evaluation_criteria',
   'tender_summary': 'tender_summary'
 };
+
+// Add type definitions for table of contents
+interface TableOfContentsSection {
+  section_number: string;
+  section_title: string;
+  page_number?: string;
+  subsections?: {
+    subsection_number: string;
+    subsection_title: string;
+    page_number?: string;
+  }[];
+}
+
+type TableOfContentsData = TableOfContentsSection[];
 
 // Custom hooks for section data
 const useSectionDetails = (tenderId: string, sectionName: string, orgName?: string, enabled: boolean = true) => {
@@ -199,6 +214,7 @@ const useReanalyzeSection = () => {
 const ICON_SIZE = 24;
 
 const TABS = [
+  { id: 'table_of_contents', name: 'Table of Contents', icon: FileText },
   { id: 'scope', name: 'Scope of Work', icon: FileText },
   { id: 'evaluation', name: 'Evaluation Criteria', icon: PieChart },
   { id: 'eligibility', name: 'Eligibility', icon: CheckSquare },
@@ -665,7 +681,7 @@ const TenderSummary = () => {
   console.log('Tender ID:', id);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('scope');
+  const [activeTab, setActiveTab] = useState('table_of_contents');
   const [documents, setDocuments] = useState<Document[]>([]);
   const [selectedDocuments, setSelectedDocuments] = useState<{ [key: string]: Document }>({});
   const [modalOpen, setModalOpen] = useState<number | null>(null);
@@ -687,6 +703,7 @@ const TenderSummary = () => {
   const [isPolling, setIsPolling] = useState(false);
   const [assignments, setAssignments] = useState<{ [key: number]: string }>({});
   const [editingAssignment, setEditingAssignment] = useState<number | null>(null);
+  const [expandedTocSections, setExpandedTocSections] = useState<{ [key: number]: boolean }>({});
 
   // React Query hooks for each section - enable only when needed
   const scopeQuery = useSectionDetails(
@@ -751,11 +768,19 @@ const TenderSummary = () => {
     activeTab === 'evaluation' && isSectionAccessible('evaluation', sectionStatus, sectionApiMapping)
   );
 
+  // Add table of contents query
+  const tableOfContentsQuery = useSectionDetails(
+    id || '', 
+    'table_of_contents', 
+    orgName || undefined, 
+    activeTab === 'table_of_contents' && isSectionAccessible('table_of_contents', sectionStatus, sectionApiMapping)
+  );
+
   // Mutation for reanalyzing sections
   const reanalyzeMutation = useReanalyzeSection();
 
   // Check if initial data is loading
-  const isInitialLoading = tenderSummaryQuery.isLoading || scopeQuery.isLoading;
+  const isInitialLoading = tenderSummaryQuery.isLoading
 
   // Check if active section is loading
   const isActiveSectionLoading = () => {
@@ -780,6 +805,8 @@ const TenderSummary = () => {
         return annexuresQuery.isLoading;
       case 'evaluation':
         return evaluationQuery.isLoading;
+      case 'table_of_contents':
+        return tableOfContentsQuery.isLoading;
       default:
         return false;
     }
@@ -856,6 +883,7 @@ const TenderSummary = () => {
         case 'submission': return annexuresQuery;
         case 'evaluation': return evaluationQuery;
         case 'compliance': return complianceQuery;
+        case 'table_of_contents': return tableOfContentsQuery;
         default: return null;
       }
     };
@@ -950,18 +978,18 @@ const TenderSummary = () => {
     if (!sectionStatus?.sections) return false;
     
     // Get the status of scope of work and tender summary sections
-    const scopeStatus = sectionStatus.sections['scope_of_work']?.status;
-    const summaryStatus = sectionStatus.sections['tender_summary']?.status;
+    const tableofContentsStatus = sectionStatus.sections['table_of_contents']?.status;
+    const tenderSummaryStatus = sectionStatus.sections['tender_summary']?.status;
     
     // Show analyzing state if either:
     // 1. Both sections are in analyzing state
     // 2. One section is analyzing and other is null (not analyzed yet)
     // 3. Both sections are null (not analyzed yet)
-    return (scopeStatus === 'analyzing' || scopeStatus === null) && 
-           (summaryStatus === 'analyzing' || summaryStatus === null) &&
+    return (tableofContentsStatus === 'analyzing' || tableofContentsStatus === null) && 
+           (tenderSummaryStatus === 'analyzing' || tenderSummaryStatus === null) &&
            // At least one section should be analyzing or both should be null
-           (scopeStatus === 'analyzing' || summaryStatus === 'analyzing' || 
-            (scopeStatus === null && summaryStatus === null));
+           (tableofContentsStatus === 'analyzing' || tenderSummaryStatus === 'analyzing' || 
+            (tableofContentsStatus === null && tenderSummaryStatus === null));
   };
 
   // Function to trigger analysis
@@ -1556,8 +1584,8 @@ const TenderSummary = () => {
   };
 
   const handleNextTabs = () => {
-    if (visibleTabsStart + 5 < availableTabs.length) {
-      setVisibleTabsStart(prev => prev + 1);
+    if (visibleTabsStart + 5 < visibleTabs.length) {
+      setVisibleTabsStart(visibleTabsStart + 5);
     }
   };
 
@@ -1607,6 +1635,8 @@ const TenderSummary = () => {
     }
 
     switch (activeTab) {
+      case 'table_of_contents':
+        return renderTableOfContents();
       case 'scope':
         return renderScopeOfWork();
       case 'evaluation':
@@ -1746,7 +1776,7 @@ const TenderSummary = () => {
     }
   };
 
-  // Filter out empty sections and update the existing availableTabs
+  // Filter out empty sections and update the existing visibleTabs
   const visibleTabs = TABS
     .filter(tab => {
       const sectionState = getSectionState(tab.id, sectionStatus, sectionApiMapping);
@@ -2518,6 +2548,123 @@ const TenderSummary = () => {
       return;
     }
     setActiveTab(tabId);
+  };
+
+  // Add render function for table of contents
+  const renderTableOfContents = () => {
+    if (tableOfContentsQuery.isLoading) {
+      return (
+        <div className="flex flex-col items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent mb-4"></div>
+          <p className="text-gray-600">Loading table of contents...</p>
+        </div>
+      );
+    }
+    if (tableOfContentsQuery.isError) return <div>Error loading table of contents</div>;
+    
+    const data = tableOfContentsQuery.data?.processed_section;
+    if (!data || !Array.isArray(data)) return null;
+
+    const handleToggleSection = (index: number) => {
+      setExpandedTocSections(prev => ({
+        ...prev,
+        [index]: !prev[index]
+      }));
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-medium text-gray-900">Table of Contents</h3>
+          <div className="flex items-center text-sm text-gray-500">
+            <FileText size={16} className="mr-1" />
+            <span>{data.length} Sections</span>
+          </div>
+        </div>
+        
+        <div className="space-y-3">
+          {data.map((section: TableOfContentsSection, index: number) => {
+            const hasSubsections = section.subsections && section.subsections.length > 0;
+            const expanded = expandedTocSections[index];
+            // Detect annexure by section.section_number or section.section_title
+            const isAnnexure = (section.section_number || '').toLowerCase().includes('annexure') || (section.section_title || '').toLowerCase().includes('annexure');
+            // Extract annexure number if possible
+            let annexureNumber = '';
+            if (isAnnexure) {
+              const match = (section.section_number || '').match(/Annexure\s*(\d+)/i);
+              annexureNumber = match ? match[1] : (section.section_number || '').replace(/Annexure/i, '').trim();
+            }
+            return (
+              <div 
+                key={index} 
+                className="bg-white rounded-lg border border-gray-200 p-4 hover:border-blue-200 transition-all duration-200 shadow-sm hover:shadow-md"
+              >
+                <div className="flex items-center justify-between cursor-pointer" onClick={() => hasSubsections && handleToggleSection(index)}>
+                  <div className="flex items-center gap-3">
+                    {/* Circle for section number or annexure */}
+                    {isAnnexure ? (
+                      <div className="flex flex-col items-center justify-center w-10 h-10 rounded-full bg-blue-50 overflow-hidden">
+                        <span className="text-[10px] text-blue-500 leading-none font-semibold">Annexure</span>
+                        <span className="text-base font-bold text-blue-600 leading-none">{annexureNumber || section.section_number.replace(/Annexure/i, '').trim()}</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-50">
+                        <FileText size={18} className="text-blue-600" />
+                      </div>
+                    )}
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-blue-600">{section.section_number}</span>
+                        <h4 className="text-base font-medium text-gray-900">{section.section_title}</h4>
+                      </div>
+                      {section.page_number && (
+                        <span className="text-sm text-gray-500">Page {section.page_number}</span>
+                      )}
+                    </div>
+                  </div>
+                  {hasSubsections && (
+                    <div className="flex items-center text-sm text-gray-500">
+                      <span className="mr-1">{(section.subsections || []).length}</span>
+                      {expanded ? (
+                        <ChevronDown size={16} className="text-blue-500 rotate-180 transition-transform duration-200" />
+                      ) : (
+                        <ChevronRight size={16} className="text-gray-400 transition-transform duration-200" />
+                      )}
+                    </div>
+                  )}
+                </div>
+                {hasSubsections && expanded && (
+                  <div className="mt-4 pl-11 space-y-3 border-t border-gray-100 pt-3">
+                    {(section.subsections || []).map((subsection, subIndex: number) => (
+                      <div 
+                        key={subIndex} 
+                        className="flex items-center justify-between group hover:bg-gray-50 p-2 rounded-md transition-colors duration-200"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gray-50 group-hover:bg-blue-50 transition-colors duration-200 overflow-hidden">
+                            <span className="text-xs font-medium text-gray-600 group-hover:text-blue-600 text-ellipsis whitespace-nowrap overflow-hidden">
+                              {subsection.subsection_number}
+                            </span>
+                          </div>
+                          <span className="text-sm text-gray-600 group-hover:text-gray-900">
+                            {subsection.subsection_title}
+                          </span>
+                        </div>
+                        {subsection.page_number && (
+                          <span className="text-xs text-gray-500 group-hover:text-gray-700">
+                            Page {subsection.page_number}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
   };
 
   return (

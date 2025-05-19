@@ -224,7 +224,27 @@ const UploadArea = () => {
       const data = await response.json();
       console.log('Received data:', data);
 
-      setSectionStatus(data);
+      // Validate the data structure
+      if (!data || typeof data !== 'object') {
+        throw new Error('Invalid response format');
+      }
+
+      // Check required fields
+      if (!data.status || !data.tender_id || !data.tender_name || !data.sections || !data.progress) {
+        throw new Error('Missing required fields in response');
+      }
+
+      // Validate sections structure
+      if (typeof data.sections !== 'object') {
+        throw new Error('Invalid sections format');
+      }
+
+      // Validate progress structure
+      if (!data.progress.total || typeof data.progress.completion_percentage !== 'number') {
+        throw new Error('Invalid progress format');
+      }
+
+      setSectionStatus(data as SectionStatus);
 
       if (data.sections) {
         const isComplete = Object.values(data.sections).every(
@@ -245,6 +265,16 @@ const UploadArea = () => {
       }
     } catch (error) {
       console.error('Error in fetchSectionStatus:', error);
+      // Set error state
+      setUploadStatus({
+        status: 'error',
+        message: error instanceof Error ? error.message : 'Failed to fetch section status'
+      });
+      setIsAnalyzing(false);
+      if (statusInterval) {
+        window.clearInterval(statusInterval);
+        setStatusInterval(null);
+      }
     }
   };
 
