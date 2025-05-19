@@ -707,7 +707,7 @@ const PDFViewerModal: React.FC<PDFViewerModalProps> = ({
           </button>
         </div>
 
-        {/* PDF Viewer */}
+        {/* PDF Viewer Container */}
         <div className="flex-1 overflow-hidden">
           <PDFViewer pdfUrl={pdfUrl} initialPage={initialPage} />
         </div>
@@ -1742,11 +1742,7 @@ const TenderSummary = () => {
     return (
       <div className="w-full">
         <div className="mb-6">
-          <a href="/" className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-4">
-            <ArrowLeft size={16} className="mr-1" />
-            Back to Dashboard
-          </a>
-          
+         
           <div className="bg-white rounded-lg shadow-sm p-8">
             <h1 className="text-2xl font-bold text-gray-900 mb-4">{originalTenderName}</h1>
             
@@ -2784,10 +2780,7 @@ const TenderSummary = () => {
   return (
     <div className="w-full px-4 py-8">
       <div className="mb-6">
-        <a href="/" className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-4">
-          <ArrowLeft size={16} className="mr-1" />
-          Back to Dashboard
-        </a>
+      
         
         <div className="bg-white rounded-lg shadow-sm">
           <div className="p-6 border-b border-gray-200">
@@ -2985,7 +2978,7 @@ const TenderSummary = () => {
             </div>
 
             {/* Content Area */}
-            <div className="flex-1 overflow-auto p-6" style={{ height: 'calc(100vh)' }}>
+            <div className="flex-1 p-6">
               {renderActiveTabContent()}
             </div>
           </div>
