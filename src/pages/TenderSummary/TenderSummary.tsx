@@ -2253,6 +2253,16 @@ const TenderSummary = () => {
                     {doc.document_details.reference_number && (
                       <div className="text-sm text-gray-500">Ref: {doc.document_details.reference_number}</div>
                     )}
+                    {/* Add page number with clickable link */}
+                    {doc.document_details.page_number && (
+                      <button
+                        onClick={() => handlePageClick(doc.document_details.page_number)}
+                        className="mt-1 inline-flex items-center text-sm text-blue-600 hover:text-blue-800 cursor-pointer"
+                      >
+                        <Link size={14} className="mr-1" />
+                        <span>Page {doc.document_details.page_number}</span>
+                      </button>
+                    )}
                     {doc.document_details.description && (
                       <div className="text-sm text-gray-600 mt-1">{doc.document_details.description}</div>
                     )}
