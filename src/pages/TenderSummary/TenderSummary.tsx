@@ -2324,13 +2324,13 @@ const TenderSummary = () => {
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500">
                         <div className="space-y-1">
-                          {doc.submission_requirements.deadline && (
+                          {doc.submission_requirements?.deadline && (
                             <div>Deadline: {doc.submission_requirements.deadline}</div>
                           )}
-                          {doc.submission_requirements.submission_mode && (
+                          {doc.submission_requirements?.submission_mode && (
                             <div>Mode: {doc.submission_requirements.submission_mode}</div>
                           )}
-                          {doc.submission_requirements.submission_location && (
+                          {doc.submission_requirements?.submission_location && (
                             <div>Location: {doc.submission_requirements.submission_location}</div>
                           )}
                         </div>
