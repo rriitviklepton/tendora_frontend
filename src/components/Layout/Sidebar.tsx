@@ -15,7 +15,7 @@ const Sidebar = ({ open, setOpen }: SidebarProps) => {
     { name: 'Tenders', href: '/tenders', icon: FileText },
     { name: 'Documents', href: '/documents', icon: FolderArchive },
     // { name: 'Submission', href: '/submission', icon: Send },
-    { name: 'OCR Convert', href: '/ocr-convert', icon: FileSearch },
+    // { name: 'OCR Convert', href: '/ocr-convert', icon: FileSearch },
     // { name: 'Analytics', href: '/analytics', icon: BarChart },
     { name: 'Settings', href: '/settings', icon: Settings },
   ];

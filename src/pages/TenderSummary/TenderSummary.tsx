@@ -2265,214 +2265,218 @@ const TenderSummary = () => {
             </div>
           )}
         </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Document Details</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Submission Requirements</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Applicability</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned To</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {annexuresQuery.data.processed_section.map((doc: any, index: number) => (
-                <tr key={index} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 text-sm font-medium text-gray-700">
-                    {doc.document_category || '-'}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-gray-900 font-medium">{doc.document_details.name || '-'}</div>
-                    {doc.document_details.reference_number && (
-                      <div className="text-sm text-gray-500">Ref: {doc.document_details.reference_number}</div>
-                    )}
-                    {/* Add page number with clickable link */}
-                    {doc.document_details.page_number && (
-                      <button
-                        onClick={() => handlePageClick(doc.document_details.page_number)}
-                        className="mt-1 inline-flex items-center text-sm text-blue-600 hover:text-blue-800 cursor-pointer"
-                      >
-                        <Link size={14} className="mr-1" />
-                        <span>Page {doc.document_details.page_number}</span>
-                      </button>
-                    )}
-                    {doc.document_details.description && (
-                      <div className="text-sm text-gray-600 mt-1">{doc.document_details.description}</div>
-                    )}
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {doc.document_details.is_mandatory && (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                          Mandatory
-                        </span>
-                      )}
-                      {doc.document_details.stage_required && (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          {doc.document_details.stage_required}
-                        </span>
-                      )}
-                      {doc.document_details.submission_format.format_type && (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                          {doc.document_details.submission_format.format_type}
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">
-                    <div className="space-y-1">
-                      {doc.submission_requirements.deadline && (
-                        <div>Deadline: {doc.submission_requirements.deadline}</div>
-                      )}
-                      {doc.submission_requirements.submission_mode && (
-                        <div>Mode: {doc.submission_requirements.submission_mode}</div>
-                      )}
-                      {doc.submission_requirements.submission_location && (
-                        <div>Location: {doc.submission_requirements.submission_location}</div>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">
-                    <div className="space-y-1">
-                      {doc.applicability.applicable_to && (
-                        <div>For: {doc.applicability.applicable_to}</div>
-                      )}
-                      {doc.applicability.exemptions && (
-                        <div className="text-amber-600">
-                          Exemptions: {doc.applicability.exemptions}
-                        </div>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {editingAssignment === index ? (
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="text"
-                          value={assignments[index] || ''}
-                          onChange={(e) => {
-                            setAssignments(prev => ({
-                              ...prev,
-                              [index]: e.target.value
-                            }));
-                          }}
-                          onBlur={() => setEditingAssignment(null)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              setEditingAssignment(null);
-                            }
-                          }}
-                          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                          placeholder="Enter name"
-                          autoFocus
-                        />
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => setEditingAssignment(index)}
-                        className="text-sm text-gray-500 hover:text-blue-600 flex items-center space-x-1"
-                      >
-                        <span>{assignments[index] || 'Click to assign'}</span>
-                        <Users size={14} className="ml-1" />
-                      </button>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${
-                      uploadedDocuments[index]
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {uploadedDocuments[index] ? 'Attached' : 'Pending'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {uploadedDocuments[index] ? (
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm text-gray-600 truncate max-w-xs">
-                          {documents.find(d => d.file_id === uploadedDocuments[index])?.filename}
-                        </span>
-                        <button 
-                          onClick={() => handleDocumentSelect(index, undefined)}
-                          className="text-red-600 hover:text-red-800 flex-shrink-0"
-                          title="Remove document"
-                        >
-                          <XCircle size={16} />
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => setModalOpen(index)}
-                          className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                          title="Select existing document"
-                        >
-                          <File size={16} className="mr-1" />
-                          Select
-                        </button>
-
-                        <div className="relative">
-                          <input
-                            type="file"
-                            id={`file-upload-${index}`}
-                            className="hidden"
-                            onChange={(e) => handleFileUpload(e, index)}
-                            disabled={uploading !== null}
-                            accept=".pdf,.doc,.docx,.xls,.xlsx,.txt"
-                          />
-                          <label
-                            htmlFor={`file-upload-${index}`}
-                            className={`inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium ${
-                              uploading === index
-                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                : 'text-gray-700 bg-white hover:bg-gray-50 cursor-pointer'
-                            }`}
-                            title="Upload new document"
+        <div className="relative overflow-hidden border border-gray-200 rounded-lg">
+          <div className="overflow-x-auto">
+            <div className="inline-block min-w-full align-middle">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Document Details</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Submission Requirements</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Applicability</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned To</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {annexuresQuery.data.processed_section.map((doc: any, index: number) => (
+                    <tr key={index} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 text-sm font-medium text-gray-700">
+                        {doc.document_category || '-'}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-gray-900 font-medium">{doc.document_details.name || '-'}</div>
+                        {doc.document_details.reference_number && (
+                          <div className="text-sm text-gray-500">Ref: {doc.document_details.reference_number}</div>
+                        )}
+                        {/* Add page number with clickable link */}
+                        {doc.document_details.page_number && (
+                          <button
+                            onClick={() => handlePageClick(doc.document_details.page_number)}
+                            className="mt-1 inline-flex items-center text-sm text-blue-600 hover:text-blue-800 cursor-pointer"
                           >
-                            {uploading === index ? (
-                              <>
-                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-500 border-t-transparent mr-1" />
-                                Uploading...
-                              </>
-                            ) : (
-                              <>
-                                <Upload size={16} className="mr-1" />
-                                Upload
-                              </>
-                            )}
-                          </label>
-                        </div>
-
-                        <button
-                          onClick={() => handleGetAIRecommendation(index)}
-                          disabled={loadingRecommendation !== null || uploading !== null}
-                          className={`inline-flex items-center px-3 py-2 border border-transparent rounded-md text-sm font-medium ${
-                            loadingRecommendation !== null || uploading !== null
-                              ? 'bg-gray-400 text-white cursor-not-allowed'
-                              : 'bg-purple-600 text-white hover:bg-purple-700'
-                          }`}
-                          title="Get AI recommendation"
-                        >
-                          {loadingRecommendation === index ? (
-                            <>
-                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-1" />
-                              Analyzing...
-                            </>
-                          ) : (
-                            <>
-                              <Info size={16} className="mr-1" />
-                              Suggest
-                            </>
+                            <Link size={14} className="mr-1" />
+                            <span>Page {doc.document_details.page_number}</span>
+                          </button>
+                        )}
+                        {doc.document_details.description && (
+                          <div className="text-sm text-gray-600 mt-1">{doc.document_details.description}</div>
+                        )}
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {doc.document_details.is_mandatory && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                              Mandatory
+                            </span>
                           )}
-                        </button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                          {doc.document_details.stage_required && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              {doc.document_details.stage_required}
+                            </span>
+                          )}
+                          {doc.document_details.submission_format.format_type && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                              {doc.document_details.submission_format.format_type}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        <div className="space-y-1">
+                          {doc.submission_requirements.deadline && (
+                            <div>Deadline: {doc.submission_requirements.deadline}</div>
+                          )}
+                          {doc.submission_requirements.submission_mode && (
+                            <div>Mode: {doc.submission_requirements.submission_mode}</div>
+                          )}
+                          {doc.submission_requirements.submission_location && (
+                            <div>Location: {doc.submission_requirements.submission_location}</div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        <div className="space-y-1">
+                          {doc.applicability.applicable_to && (
+                            <div>For: {doc.applicability.applicable_to}</div>
+                          )}
+                          {doc.applicability.exemptions && (
+                            <div className="text-amber-600">
+                              Exemptions: {doc.applicability.exemptions}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {editingAssignment === index ? (
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="text"
+                              value={assignments[index] || ''}
+                              onChange={(e) => {
+                                setAssignments(prev => ({
+                                  ...prev,
+                                  [index]: e.target.value
+                                }));
+                              }}
+                              onBlur={() => setEditingAssignment(null)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  setEditingAssignment(null);
+                                }
+                              }}
+                              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                              placeholder="Enter name"
+                              autoFocus
+                            />
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setEditingAssignment(index)}
+                            className="text-sm text-gray-500 hover:text-blue-600 flex items-center space-x-1"
+                          >
+                            <span>{assignments[index] || 'Click to assign'}</span>
+                            <Users size={14} className="ml-1" />
+                          </button>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${
+                          uploadedDocuments[index]
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {uploadedDocuments[index] ? 'Attached' : 'Pending'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {uploadedDocuments[index] ? (
+                          <div className="flex items-center space-x-2">
+                            <span className="text-sm text-gray-600 truncate max-w-xs">
+                              {documents.find(d => d.file_id === uploadedDocuments[index])?.filename}
+                            </span>
+                            <button 
+                              onClick={() => handleDocumentSelect(index, undefined)}
+                              className="text-red-600 hover:text-red-800 flex-shrink-0"
+                              title="Remove document"
+                            >
+                              <XCircle size={16} />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => setModalOpen(index)}
+                              className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                              title="Select existing document"
+                            >
+                              <File size={16} className="mr-1" />
+                              Select
+                            </button>
+
+                            <div className="relative">
+                              <input
+                                type="file"
+                                id={`file-upload-${index}`}
+                                className="hidden"
+                                onChange={(e) => handleFileUpload(e, index)}
+                                disabled={uploading !== null}
+                                accept=".pdf,.doc,.docx,.xls,.xlsx,.txt"
+                              />
+                              <label
+                                htmlFor={`file-upload-${index}`}
+                                className={`inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium ${
+                                  uploading === index
+                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                    : 'text-gray-700 bg-white hover:bg-gray-50 cursor-pointer'
+                                }`}
+                                title="Upload new document"
+                              >
+                                {uploading === index ? (
+                                  <>
+                                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-500 border-t-transparent mr-1" />
+                                    Uploading...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Upload size={16} className="mr-1" />
+                                    Upload
+                                  </>
+                                )}
+                              </label>
+                            </div>
+
+                            <button
+                              onClick={() => handleGetAIRecommendation(index)}
+                              disabled={loadingRecommendation !== null || uploading !== null}
+                              className={`inline-flex items-center px-3 py-2 border border-transparent rounded-md text-sm font-medium ${
+                                loadingRecommendation !== null || uploading !== null
+                                  ? 'bg-gray-400 text-white cursor-not-allowed'
+                                  : 'bg-purple-600 text-white hover:bg-purple-700'
+                              }`}
+                              title="Get AI recommendation"
+                            >
+                              {loadingRecommendation === index ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-1" />
+                                  Analyzing...
+                                </>
+                              ) : (
+                                <>
+                                  <Info size={16} className="mr-1" />
+                                  Suggest
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -2978,8 +2982,10 @@ const TenderSummary = () => {
             </div>
 
             {/* Content Area */}
-            <div className="flex-1 p-6">
-              {renderActiveTabContent()}
+            <div className="flex-1 overflow-hidden">
+              <div className="h-full overflow-auto p-6">
+                {renderActiveTabContent()}
+              </div>
             </div>
           </div>
         </div>
