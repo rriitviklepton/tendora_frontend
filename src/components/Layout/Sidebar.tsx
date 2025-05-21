@@ -37,13 +37,13 @@ const Sidebar = ({ open, setOpen }: SidebarProps) => {
         }`}
       >
         {/* Header and close button */}
-        <div className="flex items-center justify-between h-16 px-4 bg-blue-800">
+        <div className="flex items-center justify-between h-16 rounded-lg px-4 bg-white">
           <div className="flex items-center">
-            <span className="text-xl font-bold text-white">SmartTender</span>
+            <img src="/assets/images/logo.png" alt="SmartTender Logo" className="h-8" />
           </div>
           <button
             type="button"
-            className="text-white hover:text-gray-200 focus:outline-none"
+            className="text-blue-800 hover:text-blue-600 focus:outline-none"
             onClick={() => setOpen(false)}
           >
             <X size={24} />

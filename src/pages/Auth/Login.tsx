@@ -45,7 +45,7 @@ const Login = () => {
       <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 space-y-8 transform transition-all">
         <div>
           <div className="flex justify-center mb-6">
-            <h1 className="text-4xl font-bold text-blue-900">Smart<span className="text-blue-600">Tender</span></h1>
+            <img src="/assets/images/logo.png" alt="SmartTender Logo" className="h-12" />
           </div>
           <h2 className="text-center text-2xl font-bold text-gray-900">
             Welcome to SmartTender
