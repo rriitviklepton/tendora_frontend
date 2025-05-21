@@ -30,7 +30,21 @@ import {
   CheckCircle,
   Loader,
   Eye,
-  Link
+  Link,
+  Table,
+  Code,
+  GitBranch,
+  Package,
+  MapPin,
+  Wrench,
+  Target,
+  GraduationCap,
+  LifeBuoy,
+  FileCheck,
+  Shield,
+  User,
+  Check,
+  ListTodo
 } from 'lucide-react';
 import StatusBadge from '../../components/UI/StatusBadge';
 import { getTimeRemaining, formatCurrency } from '../../utils/helpers';
@@ -409,13 +423,68 @@ interface SectionStatus {
 
 interface TenderInfo {
   scopeOfWork: {
-    contentType: string;
-    description: string | null;
-    listItems: string[] | null;
-    tableData: {
-      headers: string[] | null;
-      rows: any[] | null;
-    } | null;
+    project_overview: {
+      summary: string | null;
+      background: string | null;
+    };
+    detailed_tasks: Array<{
+      task_category: string;
+      activities: string[];
+      technical_specifications: string | null;
+      dependencies: string | null;
+    }>;
+    deliverables: Array<{
+      name: string;
+      description: string;
+      format: string | null;
+      frequency: string | null;
+      acceptance_criteria: string | null;
+    }>;
+    timeline: {
+      total_duration: string;
+      milestones: Array<{
+        name: string;
+        deadline: string;
+        deliverables: string[];
+      }>;
+      phasing_details: string;
+    };
+    location: {
+      work_mode: string;
+      specific_locations: string[];
+      site_requirements: string;
+    };
+    resources: {
+      manpower: {
+        team_structure: string;
+        key_personnel: string[];
+        minimum_qualifications: string;
+      };
+      equipment: {
+        contractor_provided: string[];
+        client_provided: string[];
+      };
+    };
+    performance_standards: {
+      service_levels: Array<{
+        parameter: string;
+        target: string;
+        measurement: string | null;
+        penalty: string;
+      }>;
+      quality_requirements: string;
+    };
+    training: {
+      is_required: boolean;
+      target_audience: string[];
+      training_scope: string;
+      duration: string | null;
+    };
+    support: {
+      warranty_period: string | null;
+      maintenance_support: string;
+      sla_terms: string;
+    };
   };
   tenderSummary: {
     title: string | null;
@@ -721,6 +790,8 @@ const TenderSummary = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('table_of_contents');
+  const [activeScopeTab, setActiveScopeTab] = useState('project_overview');
+  const [showDocumentModal, setShowDocumentModal] = useState(false);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [selectedDocuments, setSelectedDocuments] = useState<{ [key: string]: Document }>({});
   const [modalOpen, setModalOpen] = useState<number | null>(null);
@@ -746,6 +817,11 @@ const TenderSummary = () => {
   const [showPdf, setShowPdf] = useState(false);
   const [currentPdfPage, setCurrentPdfPage] = useState<number | null>(null);
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
+
+  // Add useEffect for initial tab selection
+  useEffect(() => {
+    setActiveTab('table_of_contents');
+  }, []); // Empty dependency array means this runs once when component mounts
 
   // Add PDF query near other queries
   const pdfQuery = useQuery({
@@ -1468,53 +1544,70 @@ const TenderSummary = () => {
     const tableName = 'table_name' in tableData ? tableData.table_name : null;
 
     return (
-      <div className="mt-6">
+      <div>
         {tableName && (
-          <h4 className="text-base font-medium text-gray-900 mb-3">{tableName}</h4>
+          <div className="flex items-center mb-4">
+            <div className="p-2 bg-blue-50 rounded-lg mr-3">
+              <FileText size={20} className="text-blue-600" />
+            </div>
+            <h4 className="text-base font-semibold text-gray-900">{tableName}</h4>
+          </div>
         )}
         {!tableName && (
-          <h4 className="text-sm font-medium text-gray-700 mb-3">Detailed Information</h4>
+          <div className="flex items-center mb-4">
+            <div className="p-2 bg-gray-50 rounded-lg mr-3">
+              <Table size={20} className="text-gray-600" />
+            </div>
+            <h4 className="text-base font-medium text-gray-700">Detailed Information</h4>
+          </div>
         )}
-        <div className="overflow-x-auto border border-gray-200 rounded-lg">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                {headers.map((header, index) => (
-                  <th 
-                    key={index}
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
-                    {formatCell(header)}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {rows.map((row, rowIndex) => (
-                <tr key={rowIndex} className="hover:bg-gray-50">
-                  {Array.isArray(row) ? (
-                    row.map((cell, cellIndex) => (
-                      <td 
-                        key={cellIndex}
-                        className="px-6 py-4 whitespace-pre-wrap text-sm text-gray-500"
+        <div className="overflow-x-auto">
+          <div className="inline-block min-w-full align-middle">
+            <div className="overflow-hidden border border-gray-200 rounded-xl shadow-sm">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead>
+                  <tr className="bg-gradient-to-r from-gray-50 to-white">
+                    {headers.map((header, index) => (
+                      <th 
+                        key={index}
+                        className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
                       >
-                        {formatCell(cell)}
-                      </td>
-                    ))
-                  ) : (
-                    headers.map((header, cellIndex) => (
-                      <td 
-                        key={cellIndex}
-                        className="px-6 py-4 whitespace-pre-wrap text-sm text-gray-500"
-                      >
-                        {formatCell(row[header])}
-                      </td>
-                    ))
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                        {formatCell(header)}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {rows.map((row, rowIndex) => (
+                    <tr 
+                      key={rowIndex} 
+                      className="group transition-colors hover:bg-blue-50/50"
+                    >
+                      {Array.isArray(row) ? (
+                        row.map((cell, cellIndex) => (
+                          <td 
+                            key={cellIndex}
+                            className="px-6 py-4 whitespace-pre-wrap text-sm text-gray-600 group-hover:text-gray-900"
+                          >
+                            {formatCell(cell)}
+                          </td>
+                        ))
+                      ) : (
+                        headers.map((header, cellIndex) => (
+                          <td 
+                            key={cellIndex}
+                            className="px-6 py-4 whitespace-pre-wrap text-sm text-gray-600 group-hover:text-gray-900"
+                          >
+                            {formatCell(row[header])}
+                          </td>
+                        ))
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -1685,8 +1778,13 @@ const TenderSummary = () => {
 
     if (isActiveSectionLoading()) {
       return (
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent"></div>
+        <div className="space-y-4">
+          <div className="h-6 bg-gray-200 rounded w-1/4 animate-pulse"></div>
+          <div className="space-y-2">
+            <div className="h-4 bg-gray-200 rounded w-full animate-pulse"></div>
+            <div className="h-4 bg-gray-200 rounded w-5/6 animate-pulse"></div>
+            <div className="h-4 bg-gray-200 rounded w-4/6 animate-pulse"></div>
+          </div>
         </div>
       );
     }
@@ -1723,8 +1821,8 @@ const TenderSummary = () => {
   if (isInitialLoading) {
     return (
       <div className="w-full text-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-        <p className="mt-4 text-gray-600">Loading tender details...</p>
+        <div className="w-32 h-32 mx-auto bg-blue-100 rounded-lg animate-pulse"></div>
+        <div className="mt-4 h-4 w-48 mx-auto bg-gray-200 rounded animate-pulse"></div>
       </div>
     );
   }
@@ -1850,45 +1948,106 @@ const TenderSummary = () => {
 
     // If data is an array of content items (most sections follow this format)
     if (Array.isArray(data)) {
-      return data.map((item: any, index: number) => {
-        if (!item) return null;
+      let currentGroup: any[] = [];
+      let groups: any[] = [];
+      let groupId = 0;
 
-        // Handle table data if present
-        if (item.formatHint === 'table_block' && item.tableData) {
+      // Group consecutive items of the same type
+      data.forEach((item, index) => {
+        if (!item) return;
+
+        if (currentGroup.length === 0 || currentGroup[0].formatHint === item.formatHint) {
+          currentGroup.push(item);
+        } else {
+          groups.push({ id: groupId++, items: currentGroup });
+          currentGroup = [item];
+        }
+
+        if (index === data.length - 1 && currentGroup.length > 0) {
+          groups.push({ id: groupId++, items: currentGroup });
+        }
+      });
+
+      return groups.map(group => {
+        const firstItem = group.items[0];
+
+        // Handle table group
+        if (firstItem.formatHint === 'table_block') {
           return (
-            <div key={index} className="mb-6">
-              {renderTableData(item.tableData)}
+            <div key={group.id} className="mb-8 bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:border-blue-200 transition-all duration-200">
+              {group.items.map((item: any, index: number) => (
+                <div key={index} className="mb-6 last:mb-0">
+                  {renderTableData(item.tableData)}
+                </div>
+              ))}
             </div>
           );
         }
 
-        // Handle text content
-        if (item.itemText) {
+        // Handle list items group
+        if (firstItem.formatHint === 'list_item') {
           return (
-            <div key={index} className="mb-4">
-              <div className="flex items-start">
-                {item.formatHint === 'list_item' && (
-                  <div className="flex-shrink-0 h-2 w-2 rounded-full bg-blue-600 mt-2 mr-3"></div>
-                )}
-                <p className="text-sm text-gray-600 whitespace-pre-wrap">{item.itemText}</p>
+            <div key={group.id} className="mb-8 bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:border-blue-200 transition-all duration-200">
+              <div className="space-y-3">
+                {group.items.map((item: any, index: number) => (
+                  <div key={index} className="flex items-start group">
+                    <div className="flex-shrink-0 h-2.5 w-2.5 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 mt-2 mr-3 group-hover:scale-110 transition-transform duration-200"></div>
+                    <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">{item.itemText}</p>
+                  </div>
+                ))}
               </div>
             </div>
           );
         }
 
-        // Handle evaluation criteria specific format
-        if (item.criteriaParameter) {
+        // Handle text content group
+        if (firstItem.formatHint === 'text' || firstItem.itemText) {
           return (
-            <div key={index} className="mb-4 p-4 border border-gray-200 rounded-lg">
-              <h4 className="font-medium text-gray-900 mb-2">{item.criteriaParameter}</h4>
-              {item.maxMarksWeightage && (
-                <div className="text-sm text-gray-600 mb-2">
-                  <span className="font-medium">Weightage:</span> {item.maxMarksWeightage}
-                </div>
-              )}
-              {item.subCriteriaNotes && (
-                <p className="text-sm text-gray-600 whitespace-pre-wrap">{item.subCriteriaNotes}</p>
-              )}
+            <div key={group.id} className="mb-8 bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:border-blue-200 transition-all duration-200">
+              <div className="space-y-4">
+                {group.items.map((item: any, index: number) => (
+                  <div key={index} className="prose max-w-none">
+                    <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">{item.itemText}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        }
+
+        // Handle evaluation criteria group
+        if (firstItem.criteriaParameter) {
+          return (
+            <div key={group.id} className="mb-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {group.items.map((item: any, index: number) => (
+                  <div 
+                    key={index} 
+                    className="group relative bg-white rounded-xl shadow-sm border border-gray-100 p-5 transition-all duration-200 hover:shadow-md hover:-translate-y-1 hover:border-blue-200"
+                  >
+                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-t-xl"></div>
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="text-lg font-semibold text-gray-900 mb-1">{item.criteriaParameter}</h4>
+                        {item.maxMarksWeightage && (
+                          <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-50 text-blue-700">
+                            <Calculator size={14} className="mr-1" />
+                            Weightage: {item.maxMarksWeightage}
+                          </div>
+                        )}
+                      </div>
+                      {item.subCriteriaNotes && (
+                        <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-600">
+                          <div className="flex items-start">
+                            <Info size={16} className="mr-2 mt-0.5 flex-shrink-0 text-gray-400" />
+                            <p className="whitespace-pre-wrap">{item.subCriteriaNotes}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           );
         }
@@ -1901,59 +2060,141 @@ const TenderSummary = () => {
     if (data.technicalEvaluation || data.minimumTechnicalScore || data.financialEvaluation) {
       return (
         <div className="space-y-6">
+          {/* Evaluation Stages */}
           {data.evaluationStages && (
-            <div className="mb-6">
-              <h4 className="text-sm font-medium text-gray-900 mb-2">Evaluation Stages</h4>
-              <p className="text-sm text-gray-600 whitespace-pre-wrap">{data.evaluationStages}</p>
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-6">
+                <h4 className="text-base font-semibold text-gray-900">Evaluation Stages</h4>
+                <div className="flex items-center text-sm text-gray-500">
+                  <FileText size={16} className="mr-1" />
+                  <span>Process Overview</span>
+                </div>
+              </div>
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:border-blue-200 transition-all duration-200">
+                <div className="prose max-w-none">
+                  <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">{data.evaluationStages}</p>
+                </div>
+              </div>
             </div>
           )}
           
+          {/* Eligibility & Qualifying Criteria */}
           {data.eligibilityQualifyingCriteria && (
-            <div className="mb-6">
-              <h4 className="text-sm font-medium text-gray-900 mb-2">Eligibility & Qualifying Criteria</h4>
-              <p className="text-sm text-gray-600 whitespace-pre-wrap">{data.eligibilityQualifyingCriteria}</p>
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-6">
+                <h4 className="text-base font-semibold text-gray-900">Eligibility & Qualifying Criteria</h4>
+                <div className="flex items-center text-sm text-gray-500">
+                  <CheckSquare size={16} className="mr-1" />
+                  <span>Qualification Requirements</span>
+                </div>
+              </div>
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:border-blue-200 transition-all duration-200">
+                <div className="prose max-w-none">
+                  <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">{data.eligibilityQualifyingCriteria}</p>
+                </div>
+              </div>
             </div>
           )}
 
+          {/* Technical Evaluation Section - Keep existing implementation */}
           {Array.isArray(data.technicalEvaluation) && data.technicalEvaluation.length > 0 && (
-            <div className="mb-6">
-              <h4 className="text-sm font-medium text-gray-900 mb-3">Technical Evaluation Criteria</h4>
-              <div className="space-y-4">
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-6">
+                <h4 className="text-base font-semibold text-gray-900">Technical Evaluation Criteria</h4>
+                <div className="flex items-center text-sm text-gray-500">
+                  <PieChart size={16} className="mr-1" />
+                  <span>{data.technicalEvaluation.length} Criteria</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {data.technicalEvaluation.map((criteria: any, index: number) => (
-                  <div key={index} className="p-4 border border-gray-200 rounded-lg">
-                    <h5 className="font-medium text-gray-900 mb-2">{criteria.criteriaParameter}</h5>
-                    {criteria.maxMarksWeightage && (
-                      <div className="text-sm text-gray-600 mb-2">
-                        <span className="font-medium">Weightage:</span> {criteria.maxMarksWeightage}
+                  <div 
+                    key={index} 
+                    className="group relative bg-white rounded-xl shadow-sm border border-gray-100 p-5 transition-all duration-200 hover:shadow-md hover:-translate-y-1 hover:border-blue-200"
+                  >
+                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-t-xl"></div>
+                    <div className="space-y-4">
+                      <div>
+                        <h5 className="text-lg font-semibold text-gray-900 mb-1">{criteria.criteriaParameter}</h5>
+                        {criteria.maxMarksWeightage && (
+                          <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-50 text-blue-700">
+                            <Calculator size={14} className="mr-1" />
+                            Weightage: {criteria.maxMarksWeightage}
+                          </div>
+                        )}
                       </div>
-                    )}
-                    {criteria.subCriteriaNotes && (
-                      <p className="text-sm text-gray-600 whitespace-pre-wrap">{criteria.subCriteriaNotes}</p>
-                    )}
+                      {criteria.subCriteriaNotes && (
+                        <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-600">
+                          <div className="flex items-start">
+                            <Info size={16} className="mr-2 mt-0.5 flex-shrink-0 text-gray-400" />
+                            <p className="whitespace-pre-wrap">{criteria.subCriteriaNotes}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
           )}
 
+          {/* Minimum Technical Score */}
           {data.minimumTechnicalScore && (
-            <div className="mb-6">
-              <h4 className="text-sm font-medium text-gray-900 mb-2">Minimum Technical Score Required</h4>
-              <p className="text-sm text-gray-600">{data.minimumTechnicalScore}</p>
+            <div className="mb-8">
+              <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-100">
+                <div className="flex items-start space-x-4">
+                  <div className="flex-shrink-0">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <CheckSquare size={24} className="text-blue-600" />
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="text-base font-semibold text-gray-900 mb-2">Minimum Technical Score Required</h4>
+                    <div className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-white text-blue-700 shadow-sm">
+                      <Calculator size={16} className="mr-2" />
+                      {data.minimumTechnicalScore}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
+          {/* Financial Evaluation */}
           {data.financialEvaluation && (
-            <div className="mb-6">
-              <h4 className="text-sm font-medium text-gray-900 mb-2">Financial Evaluation</h4>
-              <p className="text-sm text-gray-600 whitespace-pre-wrap">{data.financialEvaluation}</p>
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-6">
+                <h4 className="text-base font-semibold text-gray-900">Financial Evaluation</h4>
+                <div className="flex items-center text-sm text-gray-500">
+                  <DollarSign size={16} className="mr-1" />
+                  <span>Financial Assessment</span>
+                </div>
+              </div>
+              <div className="group relative bg-white rounded-xl shadow-sm border border-gray-100 p-6 transition-all duration-200 hover:shadow-md hover:border-blue-200">
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-green-500 to-blue-500 rounded-t-xl"></div>
+                <div className="prose max-w-none">
+                  <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">{data.financialEvaluation}</p>
+                </div>
+              </div>
             </div>
           )}
 
+          {/* Overall Selection Method */}
           {data.overallSelectionMethod && (
-            <div className="mb-6">
-              <h4 className="text-sm font-medium text-gray-900 mb-2">Overall Selection Method</h4>
-              <p className="text-sm text-gray-600 whitespace-pre-wrap">{data.overallSelectionMethod}</p>
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-6">
+                <h4 className="text-base font-semibold text-gray-900">Overall Selection Method</h4>
+                <div className="flex items-center text-sm text-gray-500">
+                  <PieChart size={16} className="mr-1" />
+                  <span>Selection Process</span>
+                </div>
+              </div>
+              <div className="group relative bg-white rounded-xl shadow-sm border border-gray-100 p-6 transition-all duration-200 hover:shadow-md hover:border-blue-200">
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 to-blue-500 rounded-t-xl"></div>
+                <div className="prose max-w-none">
+                  <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">{data.overallSelectionMethod}</p>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -1995,20 +2236,605 @@ const TenderSummary = () => {
   };
 
   // Update the section render functions
-  const renderScopeOfWork = () => {
-    if (scopeQuery.isLoading) return <div>Loading...</div>;
+    const renderScopeOfWork = () => {
+    if (scopeQuery.isLoading) {
+      return (
+        <div className="space-y-4">
+          <div className="h-6 bg-gray-200 rounded w-1/4 animate-pulse"></div>
+          <div className="space-y-2">
+            <div className="h-4 bg-gray-200 rounded w-full animate-pulse"></div>
+            <div className="h-4 bg-gray-200 rounded w-5/6 animate-pulse"></div>
+            <div className="h-4 bg-gray-200 rounded w-4/6 animate-pulse"></div>
+          </div>
+        </div>
+      );
+    }
+    
     if (scopeQuery.isError) return <div>Error loading scope of work</div>;
+    if (!scopeQuery.data?.processed_section) return null;
+
+    const scopeData = scopeQuery.data.processed_section;
+    
+    // Add null checks for all sections
+    if (!scopeData) return null;
+    
+    // Ensure all required objects exist with proper defaults
+    scopeData.project_overview = scopeData.project_overview || { summary: null, background: null };
+    scopeData.detailed_tasks = Array.isArray(scopeData.detailed_tasks) ? scopeData.detailed_tasks : [];
+    scopeData.detailed_tasks.forEach((task: { activities: string[] }) => {
+      task.activities = Array.isArray(task.activities) ? task.activities : [];
+    });
+
+    scopeData.deliverables = Array.isArray(scopeData.deliverables) ? scopeData.deliverables : [];
+    
+    if (scopeData.timeline) {
+      scopeData.timeline.milestones = Array.isArray(scopeData.timeline.milestones) ? scopeData.timeline.milestones : [];
+      scopeData.timeline.milestones.forEach((milestone: { deliverables: string[] }) => {
+        milestone.deliverables = Array.isArray(milestone.deliverables) ? milestone.deliverables : [];
+      });
+    } else {
+      scopeData.timeline = {
+        total_duration: '',
+        milestones: [],
+        phasing_details: ''
+      };
+    }
+
+    if (scopeData.location) {
+      scopeData.location.specific_locations = Array.isArray(scopeData.location.specific_locations) ? 
+        scopeData.location.specific_locations : [];
+    } else {
+      scopeData.location = {
+        work_mode: '',
+        specific_locations: [],
+        site_requirements: ''
+      };
+    }
+
+    // Ensure resources arrays are properly initialized
+    if (scopeData.resources?.manpower) {
+      scopeData.resources.manpower.key_personnel = Array.isArray(scopeData.resources.manpower.key_personnel) ?
+        scopeData.resources.manpower.key_personnel : [];
+    }
+    
+    if (scopeData.resources?.equipment) {
+      scopeData.resources.equipment.contractor_provided = Array.isArray(scopeData.resources.equipment.contractor_provided) ?
+        scopeData.resources.equipment.contractor_provided : [];
+      scopeData.resources.equipment.client_provided = Array.isArray(scopeData.resources.equipment.client_provided) ?
+        scopeData.resources.equipment.client_provided : [];
+    }
+
+    // Ensure performance standards arrays are properly initialized
+    if (scopeData.performance_standards) {
+      scopeData.performance_standards.service_levels = Array.isArray(scopeData.performance_standards.service_levels) ?
+        scopeData.performance_standards.service_levels : [];
+    }
+
+    // Ensure training arrays are properly initialized
+    if (scopeData.training) {
+      scopeData.training.target_audience = Array.isArray(scopeData.training.target_audience) ?
+        scopeData.training.target_audience : 
+        (scopeData.training.target_audience ? [scopeData.training.target_audience] : []);
+    }
+    
+    scopeData.support = scopeData.support || { 
+      warranty_period: null, 
+      maintenance_support: '', 
+      sla_terms: '' 
+    };
+
+    // Initialize resources if not present
+    scopeData.resources = scopeData.resources || {
+      manpower: { 
+        team_structure: '', 
+        key_personnel: [], 
+        minimum_qualifications: '' 
+      },
+      equipment: { 
+        contractor_provided: [], 
+        client_provided: [] 
+      }
+    };
+
+    // Initialize performance standards if not present
+    scopeData.performance_standards = scopeData.performance_standards || { 
+      service_levels: [], 
+      quality_requirements: '' 
+    };
+
+         // Initialize training if not present
+     scopeData.training = scopeData.training || { 
+       is_required: false, 
+       target_audience: [], 
+       training_scope: '', 
+       duration: null 
+     };
+
+     const scopeTabs = [
+       { id: 'project_overview', label: 'Project Overview', icon: <FileText className="w-5 h-5" /> },
+       { id: 'detailed_tasks', label: 'Tasks & Activities', icon: <ListTodo className="w-5 h-5" /> },
+       { id: 'deliverables', label: 'Deliverables', icon: <Package className="w-5 h-5" /> },
+       { id: 'timeline', label: 'Timeline', icon: <Calendar className="w-5 h-5" /> },
+       { id: 'location', label: 'Location', icon: <MapPin className="w-5 h-5" /> },
+       { id: 'resources', label: 'Resources', icon: <Users className="w-5 h-5" /> },
+       { id: 'performance_standards', label: 'Performance', icon: <Target className="w-5 h-5" /> },
+       { id: 'training', label: 'Training', icon: <GraduationCap className="w-5 h-5" /> },
+       { id: 'support', label: 'Support', icon: <LifeBuoy className="w-5 h-5" /> },
+     ];
     
     return (
-      <div className="space-y-6">
-        <h3 className="text-lg font-medium text-gray-900">Scope of Work</h3>
-        {renderContentSection(scopeQuery.data)}
+      <div className="space-y-8">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xl font-semibold text-gray-900">Scope of Work</h3>
+          <div className="flex items-center text-sm text-gray-500">
+            <FileText size={16} className="mr-1" />
+            <span>Project Details</span>
+          </div>
+        </div>
+        
+        <div className="flex space-x-6">
+          {/* Vertical Tabs */}
+          <div className="w-64 shrink-0">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+              {scopeTabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveScopeTab(tab.id)}
+                  className={`w-full flex items-center space-x-3 px-4 py-3 text-left transition-colors
+                    ${activeScopeTab === tab.id
+                      ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-500'
+                      : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                >
+                  {tab.icon}
+                  <span className="text-sm font-medium">{tab.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Content Area */}
+          <div className="flex-1 min-h-[600px] bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            {activeScopeTab === 'project_overview' && (
+              <div className="space-y-6">
+                <h4 className="text-lg font-semibold text-gray-900 flex items-center">
+                  <Building className="mr-2 text-blue-500" size={20} />
+                  Project Overview
+                </h4>
+                <div className="space-y-6">
+                  <div className="bg-gray-50 rounded-lg p-4 max-w-2xl">
+                    <h5 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
+                      <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                      Summary
+                    </h5>
+                    <p className="text-sm text-gray-600 leading-relaxed">{scopeData.project_overview.summary}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-6">
+                    <h5 className="text-sm font-medium text-gray-700 mb-3 flex items-center">
+                      <span className="w-2 h-2 bg-purple-500 rounded-full mr-2"></span>
+                      Background
+                    </h5>
+                    <div className="prose max-w-none">
+                      <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">{scopeData.project_overview.background}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeScopeTab === 'detailed_tasks' && (
+              <div className="space-y-6">
+                <h4 className="text-lg font-semibold text-gray-900 flex items-center">
+                  <ListTodo className="mr-2 text-green-500" size={20} />
+                  Detailed Tasks
+                </h4>
+                <div className="space-y-8">
+                  {(scopeData.detailed_tasks || []).map((task: any, index: number) => (
+                    <div key={index} className="group relative bg-gray-50 rounded-lg p-6">
+                      <div className="flex items-start justify-between mb-4">
+                        <h5 className="text-base font-medium text-gray-900 flex items-center">
+                          <span className="flex items-center justify-center w-6 h-6 rounded-full bg-green-100 text-green-600 text-xs font-semibold mr-3">
+                            {index + 1}
+                          </span>
+                          {task.task_category}
+                        </h5>
+                      </div>
+                      <div className="ml-9">
+                        <div className="space-y-4">
+                          <div>
+                            <h6 className="text-sm font-medium text-gray-700 mb-2">Activities:</h6>
+                            <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              {(task.activities || []).map((activity: string, actIndex: number) => (
+                                <li key={actIndex} className="flex items-start">
+                                  <span className="w-2 h-2 bg-green-500 rounded-full mt-2 mr-2 flex-shrink-0"></span>
+                                  <span className="text-sm text-gray-600">{activity}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                          {task.technical_specifications && (
+                            <div className="bg-white rounded-lg p-4 border border-gray-100">
+                              <h6 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
+                                <Code className="mr-2 text-blue-500" size={16} />
+                                Technical Specifications
+                              </h6>
+                              <p className="text-sm text-gray-600 leading-relaxed">{task.technical_specifications}</p>
+                            </div>
+                          )}
+                          {task.dependencies && (
+                            <div className="bg-white rounded-lg p-4 border border-gray-100">
+                              <h6 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
+                                <GitBranch className="mr-2 text-purple-500" size={16} />
+                                Dependencies
+                              </h6>
+                              <p className="text-sm text-gray-600 leading-relaxed">{task.dependencies}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeScopeTab === 'deliverables' && (
+              <div className="space-y-6">
+                <h4 className="text-lg font-semibold text-gray-900 flex items-center">
+                  <Package className="mr-2 text-orange-500" size={20} />
+                  Deliverables
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {(scopeData.deliverables || []).map((deliverable: any, index: number) => (
+                    <div key={index} className="group relative bg-gray-50 rounded-lg p-6 flex flex-col min-h-[250px] max-h-[400px]">
+                      <div className="mb-4">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                          {deliverable.frequency || 'One-time'}
+                        </span>
+                      </div>
+                      <h5 className="text-sm font-medium text-gray-900 mb-3">{deliverable.name || 'Untitled Deliverable'}</h5>
+                      <div className="flex-grow mb-4 overflow-y-auto">
+                        <p className="text-sm text-gray-600 whitespace-pre-wrap break-words">{deliverable.description || 'No description provided'}</p>
+                      </div>
+                      <div className="space-y-3 pt-2 border-t border-gray-200">
+                        {deliverable.format && (
+                          <div className="flex items-start text-xs">
+                            <FileText size={12} className="text-gray-400 mr-2 flex-shrink-0 mt-0.5" />
+                            <span className="text-gray-500 break-words">{deliverable.format}</span>
+                          </div>
+                        )}
+                        {deliverable.acceptance_criteria && (
+                          <div className="flex items-start text-xs">
+                            <CheckCircle size={12} className="text-gray-400 mr-2 flex-shrink-0 mt-0.5" />
+                            <span className="text-gray-500 break-words">{deliverable.acceptance_criteria}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeScopeTab === 'timeline' && (
+              <div className="space-y-6">
+                <h4 className="text-lg font-semibold text-gray-900 flex items-center">
+                  <Calendar className="mr-2 text-blue-500" size={20} />
+                  Timeline
+                </h4>
+                <div className="mb-6">
+                  <div className="inline-flex items-center px-4 py-2 rounded-full bg-blue-50 text-blue-700">
+                    <Clock size={16} className="mr-2" />
+                    Total Duration: {scopeData?.timeline?.total_duration || 'Not specified'}
+                  </div>
+                </div>
+                <div className="relative">
+                  {(scopeData.timeline?.milestones || []).map((milestone: any, index: number) => (
+                    <div key={index} className="relative pl-8 pb-8 last:pb-0">
+                      <div className="absolute left-0 top-0 bottom-0 w-px bg-blue-200"></div>
+                      <div className="absolute left-[-8px] top-0 w-4 h-4 rounded-full bg-blue-500 border-4 border-white shadow-sm"></div>
+                      <div className="bg-white rounded-lg p-4 border border-gray-100 shadow-sm">
+                        <div className="flex items-center justify-between mb-2">
+                          <h6 className="text-sm font-medium text-gray-900">{milestone.name || 'Untitled Milestone'}</h6>
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {milestone.deadline || 'No deadline set'}
+                          </span>
+                        </div>
+                        <div className="mt-3">
+                          <h6 className="text-xs font-medium text-gray-500 mb-2">Deliverables:</h6>
+                          <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            {(milestone?.deliverables || []).map((del: string, delIndex: number) => (
+                              <li key={delIndex} className="flex items-start">
+                                <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-1.5 mr-2 flex-shrink-0"></span>
+                                <span className="text-sm text-gray-600">{del || 'Untitled Deliverable'}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {scopeData?.timeline?.phasing_details && (
+                  <div className="mt-6 bg-gray-50 rounded-lg p-4">
+                    <h6 className="text-sm font-medium text-gray-700 mb-2">Phasing Details:</h6>
+                    <p className="text-sm text-gray-600 leading-relaxed">{scopeData.timeline.phasing_details}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeScopeTab === 'location' && (
+              <div className="space-y-6">
+                <h4 className="text-lg font-semibold text-gray-900 flex items-center">
+                  <MapPin className="mr-2 text-indigo-500" size={20} />
+                  Location
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="flex items-center mb-4">
+                      <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center mr-3">
+                        <Globe className="text-indigo-500" size={16} />
+                      </div>
+                      <div>
+                        <h6 className="text-sm font-medium text-gray-900">Work Mode</h6>
+                        <p className="text-sm text-gray-600">{scopeData?.location?.work_mode || 'Not specified'}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <h6 className="text-sm font-medium text-gray-700 mb-2">Specific Locations:</h6>
+                      <ul className="space-y-2">
+                        {(scopeData.location?.specific_locations || []).map((location: string, index: number) => (
+                          <li key={index} className="flex items-start">
+                            <MapPin size={16} className="text-indigo-500 mr-2 flex-shrink-0 mt-0.5" />
+                            <span className="text-sm text-gray-600">{location}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="flex items-center mb-4">
+                      <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center mr-3">
+                        <Building className="text-purple-500" size={16} />
+                      </div>
+                      <h6 className="text-sm font-medium text-gray-900">Site Requirements</h6>
+                    </div>
+                    <p className="text-sm text-gray-600 leading-relaxed">{scopeData?.location?.site_requirements || 'No site requirements specified'}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeScopeTab === 'resources' && (
+              <div className="space-y-6">
+                <h4 className="text-lg font-semibold text-gray-900 flex items-center">
+                  <Users className="mr-2 text-pink-500" size={20} />
+                  Resources
+                </h4>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div>
+                    <div className="flex items-center mb-4">
+                      <div className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center mr-3">
+                        <Users className="text-pink-500" size={16} />
+                      </div>
+                      <h5 className="text-base font-medium text-gray-900">Manpower</h5>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <h6 className="text-sm font-medium text-gray-700 mb-2">Team Structure</h6>
+                        <p className="text-sm text-gray-600">{scopeData.resources.manpower.team_structure}</p>
+                      </div>
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <h6 className="text-sm font-medium text-gray-700 mb-2">Key Personnel</h6>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {(scopeData.resources?.manpower?.key_personnel || []).map((person: string, index: number) => (
+                            <div key={index} className="flex items-center">
+                              <User size={14} className="text-pink-500 mr-2" />
+                              <span className="text-sm text-gray-600">{person || 'Unnamed Personnel'}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <h6 className="text-sm font-medium text-gray-700 mb-2">Minimum Qualifications</h6>
+                        <p className="text-sm text-gray-600">{scopeData.resources.manpower.minimum_qualifications}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex items-center mb-4">
+                      <div className="w-8 h-8 rounded-full bg-rose-100 flex items-center justify-center mr-3">
+                        <Wrench className="text-rose-500" size={16} />
+                      </div>
+                      <h5 className="text-base font-medium text-gray-900">Equipment</h5>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <h6 className="text-sm font-medium text-gray-700 mb-2">Contractor Provided</h6>
+                        <ul className="space-y-2">
+                          {(scopeData.resources?.equipment?.contractor_provided || []).map((item: string, index: number) => (
+                            <li key={index} className="flex items-center">
+                              <Check size={14} className="text-rose-500 mr-2" />
+                              <span className="text-sm text-gray-600">{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <h6 className="text-sm font-medium text-gray-700 mb-2">Client Provided</h6>
+                        <ul className="space-y-2">
+                          {(scopeData.resources?.equipment?.client_provided || []).map((item: string, index: number) => (
+                            <li key={index} className="flex items-center">
+                              <Check size={14} className="text-rose-500 mr-2" />
+                              <span className="text-sm text-gray-600">{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeScopeTab === 'performance_standards' && (
+              <div className="space-y-6">
+                <h4 className="text-lg font-semibold text-gray-900 flex items-center">
+                  <Target className="mr-2 text-yellow-500" size={20} />
+                  Performance Standards
+                </h4>
+                <div className="space-y-6">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Parameter</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Target</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Measurement</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Penalty</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {(scopeData?.performance_standards?.service_levels || []).map((level: any, index: number) => (
+                          <tr key={index} className="hover:bg-gray-50">
+                            <td className="px-6 py-4">
+                              <div className="flex items-center">
+                                <span className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></span>
+                                <span className="text-sm font-medium text-gray-900">{level?.parameter || 'Unnamed Parameter'}</span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-600">{level?.target || 'Not specified'}</td>
+                            <td className="px-6 py-4 text-sm text-gray-600">{level?.measurement || '-'}</td>
+                            <td className="px-6 py-4">
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                {level?.penalty || 'Not specified'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h6 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
+                      <Shield className="mr-2 text-yellow-500" size={16} />
+                      Quality Requirements
+                    </h6>
+                    <p className="text-sm text-gray-600 leading-relaxed">{scopeData?.performance_standards?.quality_requirements || 'No quality requirements specified'}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeScopeTab === 'training' && (
+              <div className="space-y-6">
+                <h4 className="text-lg font-semibold text-gray-900 flex items-center">
+                  <GraduationCap className="mr-2 text-emerald-500" size={20} />
+                  Training
+                </h4>
+                <div className="space-y-6">
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center mr-3">
+                      <CheckCircle className="text-emerald-500" size={16} />
+                    </div>
+                    <div>
+                      <h6 className="text-sm font-medium text-gray-900">Training Required</h6>
+                      <p className="text-sm text-gray-600">{scopeData.training.is_required ? 'Yes' : 'No'}</p>
+                    </div>
+                  </div>
+                  {scopeData.training.is_required && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <h6 className="text-sm font-medium text-gray-700 mb-3">Target Audience</h6>
+                        {scopeData?.training?.target_audience ? (
+                          Array.isArray(scopeData.training.target_audience) ? (
+                            <ul className="space-y-2">
+                              {scopeData.training.target_audience.map((audience: string, index: number) => (
+                                <li key={index} className="flex items-center">
+                                  <Users size={14} className="text-emerald-500 mr-2" />
+                                  <span className="text-sm text-gray-600">{audience}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <div className="flex items-center">
+                              <Users size={14} className="text-emerald-500 mr-2" />
+                              <span className="text-sm text-gray-600">{scopeData.training.target_audience}</span>
+                            </div>
+                          )
+                        ) : (
+                          <span className="text-sm text-gray-500">No target audience specified</span>
+                        )}
+                      </div>
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <h6 className="text-sm font-medium text-gray-700 mb-2">Training Scope</h6>
+                        <p className="text-sm text-gray-600 leading-relaxed">{scopeData.training.training_scope}</p>
+                        {scopeData.training.duration && (
+                          <div className="mt-3 flex items-center">
+                            <Clock size={14} className="text-emerald-500 mr-2" />
+                            <span className="text-sm text-gray-600">Duration: {scopeData.training.duration}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activeScopeTab === 'support' && (
+              <div className="space-y-6">
+                <h4 className="text-lg font-semibold text-gray-900 flex items-center">
+                  <LifeBuoy className="mr-2 text-sky-500" size={20} />
+                  Support
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {scopeData.support.warranty_period && (
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <div className="flex items-center mb-3">
+                        <Shield className="text-sky-500 mr-2" size={16} />
+                        <h6 className="text-sm font-medium text-gray-700">Warranty Period</h6>
+                      </div>
+                      <p className="text-sm text-gray-600">{scopeData.support.warranty_period}</p>
+                    </div>
+                  )}
+                  <div className="bg-gray-50 rounded-lg p-4 md:col-span-2">
+                    <div className="flex items-center mb-3">
+                      <Wrench className="text-sky-500 mr-2" size={16} />
+                      <h6 className="text-sm font-medium text-gray-700">Maintenance Support</h6>
+                    </div>
+                    <p className="text-sm text-gray-600 leading-relaxed">{scopeData?.support?.maintenance_support || 'No maintenance support details specified'}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-4 md:col-span-3">
+                    <div className="flex items-center mb-3">
+                      <FileCheck className="text-sky-500 mr-2" size={16} />
+                      <h6 className="text-sm font-medium text-gray-700">SLA Terms</h6>
+                    </div>
+                    <p className="text-sm text-gray-600 leading-relaxed">{scopeData?.support?.sla_terms || 'No SLA terms specified'}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     );
   };
 
   const renderEligibilityConditions = () => {
-    if (eligibilityQuery.isLoading) return <div>Loading...</div>;
+    if (eligibilityQuery.isLoading) {
+      return (
+        <div className="space-y-4">
+          <div className="h-6 bg-gray-200 rounded w-1/4 animate-pulse"></div>
+          <div className="space-y-2">
+            <div className="h-4 bg-gray-200 rounded w-full animate-pulse"></div>
+            <div className="h-4 bg-gray-200 rounded w-5/6 animate-pulse"></div>
+            <div className="h-4 bg-gray-200 rounded w-4/6 animate-pulse"></div>
+          </div>
+        </div>
+      );
+    };
     if (eligibilityQuery.isError) return <div>Error loading eligibility conditions</div>;
     
     return (
@@ -2020,7 +2846,18 @@ const TenderSummary = () => {
   };
 
   const renderTechnicalEvaluation = () => {
-    if (technicalQuery.isLoading) return <div>Loading...</div>;
+    if (technicalQuery.isLoading) {
+      return (
+        <div className="space-y-4">
+          <div className="h-6 bg-gray-200 rounded w-1/4 animate-pulse"></div>
+          <div className="space-y-2">
+            <div className="h-4 bg-gray-200 rounded w-full animate-pulse"></div>
+            <div className="h-4 bg-gray-200 rounded w-5/6 animate-pulse"></div>
+            <div className="h-4 bg-gray-200 rounded w-4/6 animate-pulse"></div>
+          </div>
+        </div>
+      );
+    };
     if (technicalQuery.isError) return <div>Error loading technical evaluation</div>;
     
     return (
@@ -2032,7 +2869,18 @@ const TenderSummary = () => {
   };
 
   const renderFinancialRequirements = () => {
-    if (financialQuery.isLoading) return <div>Loading...</div>;
+    if (financialQuery.isLoading) {
+      return (
+        <div className="space-y-4">
+          <div className="h-6 bg-gray-200 rounded w-1/4 animate-pulse"></div>
+          <div className="space-y-2">
+            <div className="h-4 bg-gray-200 rounded w-full animate-pulse"></div>
+            <div className="h-4 bg-gray-200 rounded w-5/6 animate-pulse"></div>
+            <div className="h-4 bg-gray-200 rounded w-4/6 animate-pulse"></div>
+          </div>
+        </div>
+      );
+    };
     if (financialQuery.isError) return <div>Error loading financial requirements</div>;
     
     return (
@@ -2044,7 +2892,18 @@ const TenderSummary = () => {
   };
 
   const renderBillOfQuantities = () => {
-    if (boqQuery.isLoading) return <div>Loading...</div>;
+    if (boqQuery.isLoading) {
+      return (
+        <div className="space-y-4">
+          <div className="h-6 bg-gray-200 rounded w-1/4 animate-pulse"></div>
+          <div className="space-y-2">
+            <div className="h-4 bg-gray-200 rounded w-full animate-pulse"></div>
+            <div className="h-4 bg-gray-200 rounded w-5/6 animate-pulse"></div>
+            <div className="h-4 bg-gray-200 rounded w-4/6 animate-pulse"></div>
+          </div>
+        </div>
+      );
+    };
     if (boqQuery.isError) return <div>Error loading bill of quantities</div>;
     
     return (
@@ -2056,7 +2915,18 @@ const TenderSummary = () => {
   };
 
   const renderContractConditions = () => {
-    if (conditionsQuery.isLoading) return <div>Loading...</div>;
+    if (conditionsQuery.isLoading) {
+      return (
+        <div className="space-y-4">
+          <div className="h-6 bg-gray-200 rounded w-1/4 animate-pulse"></div>
+          <div className="space-y-2">
+            <div className="h-4 bg-gray-200 rounded w-full animate-pulse"></div>
+            <div className="h-4 bg-gray-200 rounded w-5/6 animate-pulse"></div>
+            <div className="h-4 bg-gray-200 rounded w-4/6 animate-pulse"></div>
+          </div>
+        </div>
+      );
+    };
     if (conditionsQuery.isError) return <div>Error loading contract conditions</div>;
     
     return (
@@ -2068,7 +2938,22 @@ const TenderSummary = () => {
   };
 
   const renderComplianceRequirements = () => {
-    if (complianceQuery.isLoading) return <div>Loading...</div>;
+    if (complianceQuery.isLoading) {
+      return (
+        <div className="space-y-4">
+          <div className="h-6 bg-gray-200 rounded w-1/4 animate-pulse"></div>
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="border border-gray-200 rounded-lg p-4 space-y-3">
+                <div className="h-5 bg-gray-200 rounded w-3/4 animate-pulse"></div>
+                <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div>
+                <div className="h-4 bg-gray-200 rounded w-2/3 animate-pulse"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    };
     if (complianceQuery.isError) return <div>Error loading compliance requirements</div>;
     
     const complianceData = complianceQuery.data?.processed_section as ComplianceRequirement[];
@@ -2187,7 +3072,24 @@ const TenderSummary = () => {
   };
 
   const renderImportantDates = () => {
-    if (datesQuery.isLoading) return <div>Loading...</div>;
+    if (datesQuery.isLoading) {
+      return (
+        <div className="space-y-4">
+          <div className="h-6 bg-gray-200 rounded w-1/4 animate-pulse"></div>
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-start space-x-4 p-4 rounded-lg border border-gray-200">
+                <div className="w-3 h-3 rounded-full bg-gray-200 mt-2 animate-pulse"></div>
+                <div className="flex-grow space-y-2">
+                  <div className="h-5 bg-gray-200 rounded w-3/4 animate-pulse"></div>
+                  <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    };
     if (datesQuery.isError) return <div>Error loading important dates</div>;
     
     const dates = datesQuery.data?.processed_section;
@@ -2195,45 +3097,88 @@ const TenderSummary = () => {
     
     return (
       <div className="space-y-6">
-        <h3 className="text-lg font-medium text-gray-900">Key Dates</h3>
-        <div className="space-y-4">
-          {dates.map((date: any, index: number) => (
-            <div 
-              key={index}
-              className="relative flex items-start space-x-4 p-4 rounded-lg border border-gray-200 hover:border-blue-200 bg-white"
-            >
-              {/* Timeline dot */}
-              <div className="flex-shrink-0">
-                <div className="w-3 h-3 rounded-full mt-2 bg-blue-500"></div>
-              </div>
-
-              {/* Content */}
-              <div className="flex-grow">
-                <h4 className="text-base font-medium text-gray-900">{date.event}</h4>
-                <div className="mt-2 space-y-1">
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Clock size={16} className="mr-2" />
-                    {date.dateTime || 'Date to be announced'}
-                  </div>
-                  {date.notesLocation && (
-                    <div className="mt-2 text-sm text-gray-600">
-                      <div className="flex items-start">
-                        <Info size={16} className="mr-2 mt-0.5 flex-shrink-0" />
-                        <span>{date.notesLocation}</span>
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-medium text-gray-900">Key Dates</h3>
+          <div className="flex items-center text-sm text-gray-500">
+            <Calendar size={16} className="mr-1" />
+            <span>{dates.length} Important Dates</span>
+          </div>
+        </div>
+        <div className="relative">
+          {/* Vertical Timeline Line */}
+          <div className="absolute left-9 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-500 to-purple-500"></div>
+          
+          <div className="space-y-8">
+            {dates.map((date: any, index: number) => (
+              <div key={index} className="relative flex items-start group">
+                {/* Date Circle */}
+                <div className="absolute left-7 w-5 h-5 rounded-full border-4 border-white bg-gradient-to-r from-blue-500 to-purple-500 shadow-lg transform group-hover:scale-110 transition-transform duration-200"></div>
+                
+                {/* Content Card */}
+                <div className="ml-16 flex-grow">
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 transform transition-all duration-200 hover:shadow-md hover:-translate-y-1 hover:border-blue-200">
+                    {/* Event Title */}
+                    <h4 className="text-base font-semibold text-gray-900 mb-2">{date.event}</h4>
+                    
+                    {/* DateTime and Notes */}
+                    <div className="space-y-2">
+                      <div className="flex items-center text-sm">
+                        <div className="flex items-center text-blue-600">
+                          <Clock size={16} className="mr-2" />
+                          <span className="font-medium">{date.dateTime || 'Date to be announced'}</span>
+                        </div>
                       </div>
+                      
+                      {date.notesLocation && (
+                        <div className="flex items-start text-sm text-gray-600 bg-gray-50 rounded-lg p-2">
+                          <Info size={16} className="mr-2 mt-0.5 flex-shrink-0 text-gray-400" />
+                          <span>{date.notesLocation}</span>
+                        </div>
+                      )}
                     </div>
-                  )}
+                    
+                    {/* Page Link */}
+                    {date.page_number && (
+                      <div className="mt-3 flex justify-end">
+                        <button
+                          onClick={() => handlePageClick(date.page_number)}
+                          className="inline-flex items-center text-sm text-blue-600 hover:text-blue-800"
+                        >
+                          <Link size={14} className="mr-1" />
+                          <span>Page {date.page_number}</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     );
   };
 
   const renderSubmissionRequirements = () => {
-    if (annexuresQuery.isLoading) return <div>Loading...</div>;
+    if (annexuresQuery.isLoading) {
+      return (
+        <div className="space-y-4">
+          <div className="h-6 bg-gray-200 rounded w-1/4 animate-pulse"></div>
+          <div className="border border-gray-200 rounded-lg overflow-hidden">
+            <div className="p-4 space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center space-x-4">
+                  <div className="w-1/4 h-4 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="w-1/4 h-4 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="w-1/4 h-4 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="w-1/4 h-4 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    };
     if (annexuresQuery.isError) return <div>Error loading submission requirements</div>;
     if (!annexuresQuery.data?.processed_section) return <div>No submission requirements available</div>;
     
@@ -2631,9 +3576,19 @@ const TenderSummary = () => {
   const renderTableOfContents = () => {
     if (tableOfContentsQuery.isLoading) {
       return (
-        <div className="flex flex-col items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent mb-4"></div>
-          <p className="text-gray-600">Loading table of contents...</p>
+        <div className="flex flex-col items-center justify-center h-64 space-y-4">
+          <div className="w-48 h-6 bg-gray-200 rounded animate-pulse"></div>
+          <div className="space-y-3 w-full max-w-2xl">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center space-x-4">
+                <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>
+                  <div className="h-3 bg-gray-200 rounded w-1/2 animate-pulse"></div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       );
     }
