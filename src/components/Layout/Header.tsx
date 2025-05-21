@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Menu, Bell, MessageSquareText, ChevronDown, User } from 'lucide-react';
 
 interface HeaderProps {
@@ -7,6 +8,15 @@ interface HeaderProps {
 }
 
 const Header = ({ toggleSidebar, toggleAssistant }: HeaderProps) => {
+  const navigate = useNavigate();
+
+  const handleSignOut = () => {
+    // Clear authentication state
+    localStorage.removeItem('isAuthenticated');
+    // Redirect to login page
+    navigate('/login');
+  };
+
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
       <div className="flex items-center justify-between h-16 px-4">
@@ -63,9 +73,12 @@ const Header = ({ toggleSidebar, toggleAssistant }: HeaderProps) => {
               <a href="#settings" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                 Settings
               </a>
-              <a href="#logout" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+              <button
+                onClick={handleSignOut}
+                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              >
                 Sign out
-              </a>
+              </button>
             </div>
           </div>
         </div>
