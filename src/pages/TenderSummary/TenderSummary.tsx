@@ -7,6 +7,7 @@ import {
   FileText,
   CheckSquare,
   PieChart,
+  Settings,
   DollarSign,
   Users,
   Calendar as CalendarIcon,
@@ -19,13 +20,14 @@ import {
   ChevronDown,
   ChevronRight,
   Folder,
-  File,
-  XCircle,
+  FileCheck,
   Info,
+  File,
+  AlertTriangle,
+  XCircle,
   Calculator,
   ChevronLeft,
   Globe,
-  AlertTriangle,
   RefreshCw,
   CheckCircle,
   Loader,
@@ -40,7 +42,6 @@ import {
   Target,
   GraduationCap,
   LifeBuoy,
-  FileCheck,
   Shield,
   User,
   Check,
@@ -142,8 +143,8 @@ const sectionApiMapping: SectionMapping = {
   'table_of_contents': 'table_of_contents',
   'scope': 'scope_of_work',
   'eligibility': 'eligibility_conditions',
-  'technical': 'technical_requirements',
-  'financial': 'financial_requirements',
+  // 'technical': 'technical_requirements',
+  // 'financial': 'financial_requirements',
   'boq': 'bill_of_quantities',
   'conditions': 'conditions_of_contract',
   'compliance': 'compliance_requirements',
@@ -234,8 +235,8 @@ const TABS = [
   { id: 'scope', name: 'Scope of Work', icon: FileText },
   { id: 'evaluation', name: 'Evaluation Criteria', icon: PieChart },
   { id: 'eligibility', name: 'Eligibility', icon: CheckSquare },
-  { id: 'technical', name: 'Technical Evaluation', icon: PieChart },
-  { id: 'financial', name: 'Financial Evaluation', icon: DollarSign },
+  // { id: 'technical', name: 'Technical Evaluation', icon: PieChart },
+  // { id: 'financial', name: 'Financial Evaluation', icon: DollarSign },
   { id: 'boq', name: 'Bill of Quantities', icon: Calculator },
   { id: 'conditions', name: 'Contract Conditions', icon: FileText },
   { id: 'compliance', name: 'Compliance', icon: CheckSquare },
@@ -785,6 +786,16 @@ const PDFViewerModal: React.FC<PDFViewerModalProps> = ({
   );
 };
 
+// Add this after other constants
+const ELIGIBILITY_TABS = [
+  { id: 'legal', name: 'Legal', icon: Building },
+  { id: 'technical', name: 'Technical', icon: Settings },
+  { id: 'financial', name: 'Financial', icon: DollarSign },
+  { id: 'statutory', name: 'Statutory', icon: FileCheck },
+  { id: 'consortium', name: 'Consortium', icon: Users },
+  { id: 'disqualification', name: 'Disqualification', icon: AlertTriangle }
+];
+
 const TenderSummary = () => {
   const { id } = useParams<{ id: string }>();
   const [loading, setLoading] = useState(true);
@@ -817,7 +828,8 @@ const TenderSummary = () => {
   const [showPdf, setShowPdf] = useState(false);
   const [currentPdfPage, setCurrentPdfPage] = useState<number | null>(null);
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
-
+  const [activeEligibilityTab, setActiveEligibilityTab] = useState('legal');
+  
   // Add useEffect for initial tab selection
   useEffect(() => {
     setActiveTab('table_of_contents');
@@ -2834,13 +2846,561 @@ const TenderSummary = () => {
           </div>
         </div>
       );
-    };
+    }
     if (eligibilityQuery.isError) return <div>Error loading eligibility conditions</div>;
     
+    const eligibilityData = eligibilityQuery.data?.processed_section;
+    if (!eligibilityData) return null;
+
     return (
       <div className="space-y-6">
-        <h3 className="text-lg font-medium text-gray-900">Eligibility Conditions</h3>
-        {renderContentSection(eligibilityQuery.data)}
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-medium text-gray-900">Eligibility Conditions</h3>
+          {/* <div className="flex items-center space-x-2">
+            <span className="text-sm text-gray-500">View by category:</span>
+            <select 
+              value={activeEligibilityTab}
+              onChange={(e) => setActiveEligibilityTab(e.target.value)}
+              className="text-sm border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            >
+              {ELIGIBILITY_TABS.map(tab => (
+                <option key={tab.id} value={tab.id}>{tab.name}</option>
+              ))}
+            </select>
+          </div> */}
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="border-b border-gray-200">
+          <nav className="-mb-px flex space-x-4 overflow-x-auto" aria-label="Eligibility sections">
+            {ELIGIBILITY_TABS.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveEligibilityTab(tab.id)}
+                className={`
+                  whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm
+                  ${activeEligibilityTab === tab.id
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }
+                  flex items-center space-x-2
+                `}
+              >
+                <tab.icon size={16} />
+                <span>{tab.name}</span>
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        {/* Tab Content */}
+        <div className="mt-6">
+          {activeEligibilityTab === 'legal' && eligibilityData.legal_eligibility && (
+            <div className="space-y-6 animate-fadeIn">
+              {/* Registration Requirements */}
+              {eligibilityData.legal_eligibility.registration_requirements?.length > 0 && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 transition-all duration-200 hover:shadow-md">
+                  <div className="p-6">
+                    <h5 className="text-base font-semibold text-gray-900 flex items-center mb-4">
+                      <FileCheck className="mr-2 text-blue-500" size={20} />
+                      Registration Requirements
+                    </h5>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {eligibilityData.legal_eligibility.registration_requirements.map((reg: any, index: number) => (
+                        <div key={index} className="bg-gray-50 rounded-lg p-4 hover:bg-blue-50 transition-colors">
+                          <p className="text-sm font-medium text-gray-900">{reg.document_type}</p>
+                          {reg.validity_period && (
+                            <div className="mt-2 flex items-center text-sm text-gray-600">
+                              <Clock size={14} className="mr-1" />
+                              <span>Validity: {reg.validity_period}</span>
+                            </div>
+                          )}
+                          {reg.special_conditions && (
+                            <div className="mt-2 flex items-start text-sm text-gray-600">
+                              <Info size={14} className="mr-1 mt-0.5 flex-shrink-0" />
+                              <span>{reg.special_conditions}</span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Mandatory Licenses */}
+              {eligibilityData.legal_eligibility.mandatory_licenses?.length > 0 && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 transition-all duration-200 hover:shadow-md">
+                  <div className="p-6">
+                    <h5 className="text-base font-semibold text-gray-900 flex items-center mb-4">
+                      <FileCheck className="mr-2 text-green-500" size={20} />
+                      Mandatory Licenses
+                    </h5>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {eligibilityData.legal_eligibility.mandatory_licenses.map((license: any, index: number) => (
+                        <div key={index} className="bg-gray-50 rounded-lg p-4 hover:bg-green-50 transition-colors">
+                          <p className="text-sm font-medium text-gray-900">{license.license_type}</p>
+                          <div className="mt-2 space-y-2">
+                            {license.issuing_authority && (
+                              <div className="flex items-center text-sm text-gray-600">
+                                <Building size={14} className="mr-1" />
+                                <span>{license.issuing_authority}</span>
+                              </div>
+                            )}
+                            {license.validity_requirements && (
+                              <div className="flex items-center text-sm text-gray-600">
+                                <Clock size={14} className="mr-1" />
+                                <span>{license.validity_requirements}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Declarations Required */}
+              {eligibilityData.legal_eligibility.declarations_required?.length > 0 && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 transition-all duration-200 hover:shadow-md">
+                  <div className="p-6">
+                    <h5 className="text-base font-semibold text-gray-900 flex items-center mb-4">
+                      <FileText className="mr-2 text-purple-500" size={20} />
+                      Required Declarations
+                    </h5>
+                    <div className="space-y-4">
+                      {eligibilityData.legal_eligibility.declarations_required.map((decl: any, index: number) => (
+                        <div key={index} className="bg-gray-50 rounded-lg p-4 hover:bg-purple-50 transition-colors">
+                          <p className="text-sm font-medium text-gray-900">{decl.declaration_type}</p>
+                          <div className="mt-2 space-y-2">
+                            {decl.format && (
+                              <div className="flex items-center text-sm text-gray-600">
+                                <File size={14} className="mr-1" />
+                                <span>Format: {decl.format}</span>
+                              </div>
+                            )}
+                            {decl.content && (
+                              <div className="flex items-start text-sm text-gray-600">
+                                <Info size={14} className="mr-1 mt-0.5 flex-shrink-0" />
+                                <span>{decl.content}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeEligibilityTab === 'technical' && eligibilityData.technical_eligibility && (
+            <div className="space-y-6 animate-fadeIn">
+              {/* Past Experience */}
+              {eligibilityData.technical_eligibility.past_experience && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 transition-all duration-200 hover:shadow-md">
+                  <div className="p-6">
+                    <h5 className="text-base font-semibold text-gray-900 flex items-center mb-4">
+                      <Clock className="mr-2 text-blue-500" size={20} />
+                      Past Experience Requirements
+                    </h5>
+                    <div className="space-y-4">
+                      {eligibilityData.technical_eligibility.past_experience.similar_work && (
+                        <div className="bg-blue-50 rounded-lg p-4">
+                          <h6 className="text-sm font-medium text-blue-900 mb-3">Similar Work Experience</h6>
+                          <div className="space-y-3">
+                            {eligibilityData.technical_eligibility.past_experience.similar_work.definition && (
+                              <div className="bg-white rounded-lg p-3 shadow-sm">
+                                <p className="text-sm text-gray-900">{eligibilityData.technical_eligibility.past_experience.similar_work.definition}</p>
+                              </div>
+                            )}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              {eligibilityData.technical_eligibility.past_experience.similar_work.time_period && (
+                                <div className="bg-white rounded-lg p-3 shadow-sm">
+                                  <p className="text-xs text-gray-500 mb-1">Time Period</p>
+                                  <p className="text-sm font-medium text-gray-900">{eligibilityData.technical_eligibility.past_experience.similar_work.time_period}</p>
+                                </div>
+                              )}
+                              {eligibilityData.technical_eligibility.past_experience.similar_work.value_threshold?.project_value && (
+                                <div className="bg-white rounded-lg p-3 shadow-sm">
+                                  <p className="text-xs text-gray-500 mb-1">Project Value</p>
+                                  <p className="text-sm font-medium text-gray-900">{eligibilityData.technical_eligibility.past_experience.similar_work.value_threshold.project_value}</p>
+                                </div>
+                              )}
+                              {eligibilityData.technical_eligibility.past_experience.similar_work.value_threshold?.number_of_projects && (
+                                <div className="bg-white rounded-lg p-3 shadow-sm">
+                                  <p className="text-xs text-gray-500 mb-1">Number of Projects</p>
+                                  <p className="text-sm font-medium text-gray-900">{eligibilityData.technical_eligibility.past_experience.similar_work.value_threshold.number_of_projects}</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Manpower Requirements */}
+              {eligibilityData.technical_eligibility.manpower_requirements?.length > 0 && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 transition-all duration-200 hover:shadow-md">
+                  <div className="p-6">
+                    <h5 className="text-base font-semibold text-gray-900 flex items-center mb-4">
+                      <Users className="mr-2 text-indigo-500" size={20} />
+                      Manpower Requirements
+                    </h5>
+                    <div className="grid grid-cols-1 gap-4">
+                      {eligibilityData.technical_eligibility.manpower_requirements.map((req: any, index: number) => (
+                        <div key={index} className="bg-gray-50 rounded-lg p-4 hover:bg-indigo-50 transition-colors">
+                          <div className="flex justify-between items-start mb-3">
+                            <h6 className="text-sm font-medium text-gray-900">{req.role}</h6>
+                            {req.minimum_number && (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                Required: {req.minimum_number}
+                              </span>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {req.qualifications && (
+                              <div className="bg-white rounded p-3 shadow-sm">
+                                <p className="text-xs text-gray-500 mb-1">Qualifications</p>
+                                <p className="text-sm text-gray-900">{req.qualifications}</p>
+                              </div>
+                            )}
+                            {req.experience && (
+                              <div className="bg-white rounded p-3 shadow-sm">
+                                <p className="text-xs text-gray-500 mb-1">Experience</p>
+                                <p className="text-sm text-gray-900">{req.experience}</p>
+                              </div>
+                            )}
+                            {req.certifications && (
+                              <div className="bg-white rounded p-3 shadow-sm md:col-span-2">
+                                <p className="text-xs text-gray-500 mb-1">Required Certifications</p>
+                                <p className="text-sm text-gray-900">{req.certifications}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Infrastructure Requirements */}
+              {eligibilityData.technical_eligibility.infrastructure_requirements?.length > 0 && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 transition-all duration-200 hover:shadow-md">
+                  <div className="p-6">
+                    <h5 className="text-base font-semibold text-gray-900 flex items-center mb-4">
+                      <Building className="mr-2 text-orange-500" size={20} />
+                      Infrastructure Requirements
+                    </h5>
+                    <div className="grid grid-cols-1 gap-4">
+                      {eligibilityData.technical_eligibility.infrastructure_requirements.map((req: any, index: number) => (
+                        <div key={index} className="bg-gray-50 rounded-lg p-4 hover:bg-orange-50 transition-colors">
+                          <h6 className="text-sm font-medium text-gray-900 mb-3">{req.requirement_type}</h6>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {req.minimum_capacity && (
+                              <div className="bg-white rounded p-3 shadow-sm">
+                                <p className="text-xs text-gray-500 mb-1">Minimum Capacity</p>
+                                <p className="text-sm text-gray-900">{req.minimum_capacity}</p>
+                              </div>
+                            )}
+                            {req.ownership && (
+                              <div className="bg-white rounded p-3 shadow-sm">
+                                <p className="text-xs text-gray-500 mb-1">Ownership Requirements</p>
+                                <p className="text-sm text-gray-900">{req.ownership}</p>
+                              </div>
+                            )}
+                            {req.quantity && (
+                              <div className="bg-white rounded p-3 shadow-sm">
+                                <p className="text-xs text-gray-500 mb-1">Required Quantity</p>
+                                <p className="text-sm text-gray-900">{req.quantity}</p>
+                              </div>
+                            )}
+                            {req.location && (
+                              <div className="bg-white rounded p-3 shadow-sm">
+                                <p className="text-xs text-gray-500 mb-1">Location Requirements</p>
+                                <p className="text-sm text-gray-900">{req.location}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Quality Certifications */}
+              {eligibilityData.technical_eligibility.quality_certifications?.length > 0 && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 transition-all duration-200 hover:shadow-md">
+                  <div className="p-6">
+                    <h5 className="text-base font-semibold text-gray-900 flex items-center mb-4">
+                      <CheckCircle className="mr-2 text-green-500" size={20} />
+                      Quality Certifications
+                    </h5>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {eligibilityData.technical_eligibility.quality_certifications.map((cert: any, index: number) => (
+                        <div key={index} className="bg-gray-50 rounded-lg p-4 hover:bg-green-50 transition-colors">
+                          <h6 className="text-sm font-medium text-gray-900 mb-3">{cert.certificate_name}</h6>
+                          <div className="space-y-3">
+                            {cert.validity_requirement && (
+                              <div className="bg-white rounded p-3 shadow-sm">
+                                <p className="text-xs text-gray-500 mb-1">Validity Requirement</p>
+                                <p className="text-sm text-gray-900">{cert.validity_requirement}</p>
+                              </div>
+                            )}
+                            {cert.issuing_authority && (
+                              <div className="bg-white rounded p-3 shadow-sm">
+                                <p className="text-xs text-gray-500 mb-1">Issuing Authority</p>
+                                <p className="text-sm text-gray-900">{cert.issuing_authority}</p>
+                              </div>
+                            )}
+                            {cert.minimum_level && (
+                              <div className="bg-white rounded p-3 shadow-sm">
+                                <p className="text-xs text-gray-500 mb-1">Minimum Level Required</p>
+                                <p className="text-sm text-gray-900">{cert.minimum_level}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Technical Capabilities */}
+              {eligibilityData.technical_eligibility.technical_capabilities?.length > 0 && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 transition-all duration-200 hover:shadow-md">
+                  <div className="p-6">
+                    <h5 className="text-base font-semibold text-gray-900 flex items-center mb-4">
+                      <Target className="mr-2 text-blue-500" size={20} />
+                      Technical Capabilities
+                    </h5>
+                    <div className="grid grid-cols-1 gap-4">
+                      {eligibilityData.technical_eligibility.technical_capabilities.map((cap: any, index: number) => (
+                        <div key={index} className="bg-gray-50 rounded-lg p-4 hover:bg-blue-50 transition-colors">
+                          <h6 className="text-sm font-medium text-gray-900 mb-3">{cap.capability_type}</h6>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {cap.minimum_requirement && (
+                              <div className="bg-white rounded p-3 shadow-sm">
+                                <p className="text-xs text-gray-500 mb-1">Minimum Requirement</p>
+                                <p className="text-sm text-gray-900">{cap.minimum_requirement}</p>
+                              </div>
+                            )}
+                            {cap.proof_required && (
+                              <div className="bg-white rounded p-3 shadow-sm">
+                                <p className="text-xs text-gray-500 mb-1">Required Proof</p>
+                                <p className="text-sm text-gray-900">{cap.proof_required}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeEligibilityTab === 'financial' && eligibilityData.financial_eligibility && (
+            <div className="space-y-6 animate-fadeIn">
+              {/* Turnover Requirements */}
+              {eligibilityData.financial_eligibility.turnover_requirements && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 transition-all duration-200 hover:shadow-md">
+                  <div className="p-6">
+                    <h5 className="text-base font-semibold text-gray-900 flex items-center mb-4">
+                      <DollarSign className="mr-2 text-green-500" size={20} />
+                      Turnover Requirements
+                    </h5>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {eligibilityData.financial_eligibility.turnover_requirements.annual_requirement && (
+                        <div className="bg-green-50 rounded-lg p-4">
+                          <p className="text-xs text-green-800 font-medium mb-1">Annual Requirement</p>
+                          <p className="text-sm text-gray-900">{eligibilityData.financial_eligibility.turnover_requirements.annual_requirement}</p>
+                        </div>
+                      )}
+                      {eligibilityData.financial_eligibility.turnover_requirements.assessment_period && (
+                        <div className="bg-green-50 rounded-lg p-4">
+                          <p className="text-xs text-green-800 font-medium mb-1">Assessment Period</p>
+                          <p className="text-sm text-gray-900">{eligibilityData.financial_eligibility.turnover_requirements.assessment_period}</p>
+                        </div>
+                      )}
+                    </div>
+                    {eligibilityData.financial_eligibility.turnover_requirements.proof_required && (
+                      <div className="mt-4 bg-gray-50 rounded-lg p-4">
+                        <p className="text-xs text-gray-500 mb-2">Required Documentation</p>
+                        <p className="text-sm text-gray-900">{eligibilityData.financial_eligibility.turnover_requirements.proof_required}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Financial Metrics */}
+              {eligibilityData.financial_eligibility.financial_metrics?.length > 0 && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 transition-all duration-200 hover:shadow-md">
+                  <div className="p-6">
+                    <h5 className="text-base font-semibold text-gray-900 flex items-center mb-4">
+                      <PieChart className="mr-2 text-blue-500" size={20} />
+                      Financial Metrics
+                    </h5>
+                    <div className="grid grid-cols-1 gap-4">
+                      {eligibilityData.financial_eligibility.financial_metrics.map((metric: any, index: number) => (
+                        <div key={index} className="bg-gray-50 rounded-lg p-4">
+                          <h6 className="text-sm font-medium text-gray-900 mb-3">{metric.metric_name}</h6>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            {metric.threshold && (
+                              <div className="bg-blue-50 rounded p-3">
+                                <p className="text-xs text-blue-800 font-medium mb-1">Threshold</p>
+                                <p className="text-sm text-gray-900">{metric.threshold}</p>
+                              </div>
+                            )}
+                            {metric.measurement_period && (
+                              <div className="bg-blue-50 rounded p-3">
+                                <p className="text-xs text-blue-800 font-medium mb-1">Period</p>
+                                <p className="text-sm text-gray-900">{metric.measurement_period}</p>
+                              </div>
+                            )}
+                            {metric.calculation_method && (
+                              <div className="bg-blue-50 rounded p-3">
+                                <p className="text-xs text-blue-800 font-medium mb-1">Calculation Method</p>
+                                <p className="text-sm text-gray-900">{metric.calculation_method}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeEligibilityTab === 'statutory' && eligibilityData.statutory_compliance?.registrations?.length > 0 && (
+            <div className="space-y-6 animate-fadeIn">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 transition-all duration-200 hover:shadow-md">
+                <div className="p-6">
+                  <h5 className="text-base font-semibold text-gray-900 flex items-center mb-4">
+                    <FileCheck className="mr-2 text-purple-500" size={20} />
+                    Required Registrations
+                  </h5>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {eligibilityData.statutory_compliance.registrations.map((reg: any, index: number) => (
+                      <div key={index} className="bg-gray-50 rounded-lg p-4 hover:bg-purple-50 transition-colors">
+                        <p className="text-sm font-medium text-gray-900">{reg.registration_type}</p>
+                        {reg.validity_requirement && (
+                          <div className="mt-2 flex items-center text-sm text-gray-600">
+                            <Clock size={14} className="mr-1" />
+                            <span>{reg.validity_requirement}</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeEligibilityTab === 'consortium' && eligibilityData.consortium_conditions && (
+            <div className="space-y-6 animate-fadeIn">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 transition-all duration-200 hover:shadow-md">
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h5 className="text-base font-semibold text-gray-900 flex items-center">
+                      <Users className="mr-2 text-indigo-500" size={20} />
+                      Consortium Details
+                    </h5>
+                    <StatusBadge 
+                      status={eligibilityData.consortium_conditions.is_allowed ? "Allowed" : "Not Allowed"}
+                      color={eligibilityData.consortium_conditions.is_allowed ? "green" : "red"}
+                    />
+                  </div>
+                  
+                  {eligibilityData.consortium_conditions.is_allowed && (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {eligibilityData.consortium_conditions.maximum_members && (
+                          <div className="bg-indigo-50 rounded-lg p-4">
+                            <p className="text-xs text-indigo-800 font-medium mb-1">Maximum Members</p>
+                            <p className="text-sm text-gray-900">{eligibilityData.consortium_conditions.maximum_members}</p>
+                          </div>
+                        )}
+                        {eligibilityData.consortium_conditions.lead_member_requirements && (
+                          <div className="bg-indigo-50 rounded-lg p-4">
+                            <p className="text-xs text-indigo-800 font-medium mb-1">Lead Member Requirements</p>
+                            <p className="text-sm text-gray-900">{eligibilityData.consortium_conditions.lead_member_requirements}</p>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {eligibilityData.consortium_conditions.member_qualifications && (
+                        <div className="bg-gray-50 rounded-lg p-4">
+                          <h6 className="text-sm font-medium text-gray-900 mb-3">Member Qualifications</h6>
+                          <div className="space-y-3">
+                            {eligibilityData.consortium_conditions.member_qualifications.technical && (
+                              <div className="bg-white rounded p-3 shadow-sm">
+                                <p className="text-xs text-gray-500 mb-1">Technical Requirements</p>
+                                <p className="text-sm text-gray-900">{eligibilityData.consortium_conditions.member_qualifications.technical}</p>
+                              </div>
+                            )}
+                            {eligibilityData.consortium_conditions.member_qualifications.financial && (
+                              <div className="bg-white rounded p-3 shadow-sm">
+                                <p className="text-xs text-gray-500 mb-1">Financial Requirements</p>
+                                <p className="text-sm text-gray-900">{eligibilityData.consortium_conditions.member_qualifications.financial}</p>
+                              </div>
+                            )}
+                            {eligibilityData.consortium_conditions.member_qualifications.experience && (
+                              <div className="bg-white rounded p-3 shadow-sm">
+                                <p className="text-xs text-gray-500 mb-1">Experience Requirements</p>
+                                <p className="text-sm text-gray-900">{eligibilityData.consortium_conditions.member_qualifications.experience}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeEligibilityTab === 'disqualification' && eligibilityData.disqualification_conditions?.length > 0 && (
+            <div className="space-y-6 animate-fadeIn">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 transition-all duration-200 hover:shadow-md">
+                <div className="p-6">
+                  <h5 className="text-base font-semibold text-gray-900 flex items-center mb-4">
+                    <AlertTriangle className="mr-2 text-red-500" size={20} />
+                    Disqualification Conditions
+                  </h5>
+                  <div className="grid grid-cols-1 gap-3">
+                    {eligibilityData.disqualification_conditions.map((condition: string, index: number) => (
+                      <div key={index} className="bg-red-50 rounded-lg p-4">
+                        <div className="flex items-start space-x-3">
+                          <div className="flex-shrink-0">
+                            <div className="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center">
+                              <span className="text-xs font-medium text-red-600">{index + 1}</span>
+                            </div>
+                          </div>
+                          <p className="text-sm text-gray-900">{condition}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     );
   };
