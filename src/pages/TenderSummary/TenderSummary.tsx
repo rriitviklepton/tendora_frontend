@@ -173,7 +173,7 @@ const useSectionDetails = (tenderId: string, sectionName: string, orgName?: stri
   return useQuery<SectionResponse>({
     queryKey: ['tender', tenderId, 'section', sectionName, { orgName }],
     queryFn: async () => {
-      const url = new URL('http://192.168.2.71:8000/section-details');
+      const url = new URL('http://localhost:8000/section-details');
       url.searchParams.append('tender_id', tenderId);
       url.searchParams.append('user_id', '123');
       url.searchParams.append('section_name', sectionName);
@@ -204,7 +204,7 @@ const useReanalyzeSection = () => {
       sectionName: string; 
       orgName?: string; 
     }) => {
-      let url = `http://192.168.2.71:8000/analyze-tender-section?tender_id=${tenderId}&user_id=123&section_name=${sectionName}`;
+      let url = `http://localhost:8000/analyze-tender-section?tender_id=${tenderId}&user_id=123&section_name=${sectionName}`;
       if (orgName) {
         url += `&org_name=${encodeURIComponent(orgName)}`;
       }
@@ -980,7 +980,7 @@ const TenderSummary = () => {
       });
 
       // Fetch updated section status
-      const statusUrl = `http://192.168.2.71:8000/section-status?tender_id=${id}&user_id=123&org_name=lepton`;
+      const statusUrl = `http://localhost:8000/section-status?tender_id=${id}&user_id=123&org_name=lepton`;
       const response = await fetch(statusUrl);
       const data = await response.json();
       setSectionStatus(data);
@@ -1051,7 +1051,7 @@ const TenderSummary = () => {
       
               try {
           // Fetch tender details including PDF URL
-          let url = `http://192.168.2.71:8000/tender/${id}?user_id=123`;
+          let url = `http://localhost:8000/tender/${id}?user_id=123`;
           // Always use lepton as the default org_name if none is provided
           const effectiveOrgName = orgName || 'lepton';
           url += `&org_name=${encodeURIComponent(effectiveOrgName)}`;
@@ -1080,7 +1080,7 @@ const TenderSummary = () => {
       if (!id) return;
       
       try {
-        const statusUrl = `http://192.168.2.71:8000/section-status?tender_id=${id}&user_id=123&org_name=lepton`;
+        const statusUrl = `http://localhost:8000/section-status?tender_id=${id}&user_id=123&org_name=lepton`;
         const response = await fetch(statusUrl);
         if (!response.ok) {
           throw new Error('Failed to fetch tender data');
@@ -1143,7 +1143,7 @@ const TenderSummary = () => {
     
     setAnalyzing(true);
     try {
-      let analyzeUrl = `http://192.168.2.71:8000/analyze-tender?tender_id=${id}&user_id=123`;
+      let analyzeUrl = `http://localhost:8000/analyze-tender?tender_id=${id}&user_id=123`;
       if (orgName) {
         analyzeUrl += `&org_name=${encodeURIComponent(orgName)}`;
       }
@@ -1172,7 +1172,7 @@ const TenderSummary = () => {
     const fetchDocuments = async () => {
       try {
         // Check if the files endpoint exists
-        const response = await fetch('http://192.168.2.71:8000/files?user_id=123');
+        const response = await fetch('http://localhost:8000/files?user_id=123');
         if (response.ok) {
         const data = await response.json();
         setDocuments(data);
@@ -1201,7 +1201,7 @@ const TenderSummary = () => {
 
   const fetchUploadedDocuments = async (tenderId: string) => {
     try {
-      const response = await fetch(`http://192.168.2.71:8000/tender-documents/${tenderId}`);
+      const response = await fetch(`http://localhost:8000/tender-documents/${tenderId}`);
       if (response.ok) {
       const data = await response.json();
       setUploadedDocuments(data.uploaded_files || {});
@@ -1229,7 +1229,7 @@ const TenderSummary = () => {
         delete newUploadedFiles[documentIndex];
       }
 
-      const response = await fetch(`http://192.168.2.71:8000/tender-documents/${tenderId}`, {
+      const response = await fetch(`http://localhost:8000/tender-documents/${tenderId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -1287,7 +1287,7 @@ const TenderSummary = () => {
       formData.append('format_instructions', doc.formatSpecificInstructions || '');
       formData.append('submission_note', doc.submissionNote || '');
 
-      const response = await fetch('http://192.168.2.71:8000/ai-recommend/', {
+      const response = await fetch('http://localhost:8000/ai-recommend/', {
         method: 'POST',
         body: formData,
       });
@@ -1341,7 +1341,7 @@ const TenderSummary = () => {
     
     try {
       // First, check if AI recommendation endpoint exists
-      const testResponse = await fetch('http://192.168.2.71:8000/ai-recommend/', {
+      const testResponse = await fetch('http://localhost:8000/ai-recommend/', {
         method: 'POST',
         body: new FormData() // Empty form data for test
       });
@@ -1364,7 +1364,7 @@ const TenderSummary = () => {
         formData.append('format_instructions', doc.formatSpecificInstructions || '');
         formData.append('submission_note', doc.submissionNote || '');
 
-        const response = await fetch('http://192.168.2.71:8000/ai-recommend/', {
+        const response = await fetch('http://localhost:8000/ai-recommend/', {
           method: 'POST',
           body: formData,
         });
@@ -1397,7 +1397,7 @@ const TenderSummary = () => {
       });
 
       // Update all documents at once on the backend
-      const response = await fetch(`http://192.168.2.71:8000/tender-documents/${id}`, {
+      const response = await fetch(`http://localhost:8000/tender-documents/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -1448,7 +1448,7 @@ const TenderSummary = () => {
       formData.append('tender_id', id);
 
       console.log('Sending request to backend...');
-      const response = await fetch('http://192.168.2.71:8000/upload', {
+      const response = await fetch('http://localhost:8000/upload', {
         method: 'POST',
         body: formData,
       });
@@ -1480,7 +1480,7 @@ const TenderSummary = () => {
       await handleDocumentSelect(docIndex, newDocument);
 
       // Refresh documents list
-      const docsResponse = await fetch('http://192.168.2.71:8000/files?user_id=123');
+      const docsResponse = await fetch('http://localhost:8000/files?user_id=123');
       if (docsResponse.ok) {
         const docsData = await response.json();
         setDocuments(docsData);

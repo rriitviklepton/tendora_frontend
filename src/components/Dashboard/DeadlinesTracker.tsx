@@ -19,7 +19,7 @@ const DeadlinesTracker = () => {
   useEffect(() => {
     const fetchDeadlines = async () => {
       try {
-        const response = await fetch('http://192.168.2.71:8001/tender-deadlines');
+        const response = await fetch('http://localhost:8000/tender-deadlines');
         if (!response.ok) {
           throw new Error('Failed to fetch deadlines');
         }
