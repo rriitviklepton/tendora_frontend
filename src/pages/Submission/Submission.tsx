@@ -257,7 +257,7 @@ const Submission = () => {
 
   const fetchDocuments = async () => {
     try {
-      const response = await fetch('http://192.168.2.71:8000/files?user_id=123');
+      const response = await fetch('http://127.0.0.1:8000/files?user_id=123');
       if (!response.ok) {
         throw new Error('Failed to fetch documents');
       }
@@ -270,7 +270,7 @@ const Submission = () => {
 
   const fetchUploadedDocuments = async (tenderId: string) => {
     try {
-      const response = await fetch(`http://192.168.2.71:8000/tender-documents/${tenderId}`);
+      const response = await fetch(`http://127.0.0.1:8000/tender-documents/${tenderId}`);
       if (!response.ok) {
         throw new Error('Failed to fetch uploaded documents');
       }
@@ -291,7 +291,7 @@ const Submission = () => {
         delete newUploadedFiles[documentIndex];
       }
 
-      const response = await fetch(`http://192.168.2.71:8000/tender-documents/${tenderId}`, {
+      const response = await fetch(`http://127.0.0.1:8000/tender-documents/${tenderId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -355,7 +355,7 @@ const Submission = () => {
       formData.append('tender_id', selectedTender.id);
 
       console.log('Sending request to backend...');
-      const response = await fetch('http://192.168.2.71:8000/upload', {
+      const response = await fetch('http://127.0.0.1:8000/upload', {
         method: 'POST',
         body: formData,
       });
@@ -432,7 +432,7 @@ const Submission = () => {
       formData.append('format_instructions', doc.formatSpecificInstructions);
       formData.append('submission_note', doc.submissionNote);
 
-      const response = await fetch('http://192.168.2.71:8000/ai-recommend/', {
+      const response = await fetch('http://127.0.0.1:8000/ai-recommend/', {
         method: 'POST',
         body: formData,
       });
@@ -510,7 +510,7 @@ const Submission = () => {
         formData.append('format_instructions', doc.formatSpecificInstructions);
         formData.append('submission_note', doc.submissionNote);
 
-        const response = await fetch('http://192.168.2.71:8000/ai-recommend/', {
+        const response = await fetch('http://127.0.0.1:8000/ai-recommend/', {
           method: 'POST',
           body: formData,
         });
@@ -543,7 +543,7 @@ const Submission = () => {
       });
 
       // Update all documents at once on the backend
-      const response = await fetch(`http://192.168.2.71:8000/tender-documents/${selectedTender.id}`, {
+      const response = await fetch(`http://127.0.0.1:8000/tender-documents/${selectedTender.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
