@@ -30,7 +30,7 @@ export function GeminiSessionChat() {
     setMessages(prev => [...prev, userMessage]);
     
     try {
-      const response = await fetch("http://127.0.0.1:8003/stream", {
+      const response = await fetch("http://192.168.2.71:8003/stream", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

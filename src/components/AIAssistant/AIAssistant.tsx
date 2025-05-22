@@ -82,7 +82,7 @@ const AIAssistant = ({ open, setOpen }: AIAssistantProps) => {
   useEffect(() => {
     const fetchTenders = async () => {
       try {
-        const response = await fetch('http://127.0.0.1:8000/all-tenders?user_id=123');
+        const response = await fetch('http://192.168.2.71:8000/all-tenders?user_id=123');
         if (response.ok) {
           const data = await response.json();
           if (data.status === 'success') {
@@ -110,7 +110,7 @@ const AIAssistant = ({ open, setOpen }: AIAssistantProps) => {
   const fetchTenderDetails = async (tenderId: number) => {
     setIsFetchingTender(true);
     try {
-      const response = await fetch(`http://127.0.0.1:8000/tender/${tenderId}?user_id=123`);
+      const response = await fetch(`http://192.168.2.71:8000/tender/${tenderId}?user_id=123`);
       if (response.ok) {
         const data = await response.json();
         if (data.status === 'success') {
@@ -153,7 +153,7 @@ const AIAssistant = ({ open, setOpen }: AIAssistantProps) => {
   // Initialize session when tender is selected
   const initializeSession = async (sessionId: string, tenderId?: number) => {
     try {
-      const response = await fetch(`http://127.0.0.1:8001/create-session?session_id=${sessionId}`, {
+      const response = await fetch(`http://192.168.2.71:8001/create-session?session_id=${sessionId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -247,7 +247,7 @@ const AIAssistant = ({ open, setOpen }: AIAssistantProps) => {
     
     return () => {
       if (currentSessionId) {
-        fetch(`http://127.0.0.1:8001/session/${currentSessionId}`, {
+        fetch(`http://192.168.2.71:8001/session/${currentSessionId}`, {
           method: 'DELETE'
         }).catch(error => {
           console.error('Error cleaning up session:', error);
@@ -282,7 +282,7 @@ const AIAssistant = ({ open, setOpen }: AIAssistantProps) => {
 
       console.log('Sending request to AI Assistant:', payload);
 
-      const response = await fetch("http://127.0.0.1:8001/stream", {
+      const response = await fetch("http://192.168.2.71:8001/stream", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

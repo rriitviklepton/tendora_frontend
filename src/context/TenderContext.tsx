@@ -72,7 +72,7 @@ export const TenderProvider = ({ children }: TenderProviderProps) => {
       setLoading(true);
       // Use the new API endpoint with user_id
       const userId = '123'; // Replace with actual user ID management
-      const response = await fetch(`http://127.0.0.1:8000/recent-tenders?user_id=${userId}`);
+      const response = await fetch(`http://192.168.2.71:8000/recent-tenders?user_id=${userId}`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch tenders');
@@ -102,7 +102,7 @@ export const TenderProvider = ({ children }: TenderProviderProps) => {
       setLoading(true);
       // Use the new API endpoint with user_id
       const userId = '123'; // Replace with actual user ID management
-      const response = await fetch(`http://127.0.0.1:8000/all-tenders?user_id=${userId}`);
+      const response = await fetch(`http://192.168.2.71:8000/all-tenders?user_id=${userId}`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch tenders');
