@@ -40,6 +40,7 @@ const UploadArea = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<UploadResponse | null>(null);
   const [orgName, setOrgName] = useState('lepton');
+  const [ocrRequired, setOcrRequired] = useState(false);
   const [sectionStatus, setSectionStatus] = useState<SectionStatus | null>(null);
   const [statusInterval, setStatusInterval] = useState<number | null>(null);
 
@@ -107,7 +108,7 @@ const UploadArea = () => {
       formData.append('pdf_file', file);
       formData.append('user_id', '123');
       formData.append('org_name', orgName.trim());
-      formData.append('ocr_required', 'true');  // Always set to true
+      formData.append('ocr_required', ocrRequired.toString());
       
       const response = await fetch('http://127.0.0.1:8000/upload-tender', {
         method: 'POST',
@@ -415,7 +416,21 @@ const UploadArea = () => {
               />
             </div>
           </div>
-          
+            {/* OCR Checkbox */}
+            <div className="mb-6">
+            <label className="flex items-center justify-center space-x-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={ocrRequired}
+                onChange={(e) => setOcrRequired(e.target.checked)}
+                className="form-checkbox h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+              />
+              <div className="flex items-center text-sm text-gray-700">
+                <Scan size={16} className="mr-1" />
+                <span>Is this a scanned tender (requires image to text processing)</span>
+              </div>
+            </label>
+          </div>
           <p className="text-sm text-gray-600 mb-3">
             Drag and drop your tender file, or click to select
           </p>
