@@ -20,7 +20,7 @@ function GeminiSessionChat() {
     };
 
     try {
-      const res = await fetch("http://localhost:8003/stream", {
+      const res = await fetch("http://192.168.2.71:8003/stream", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

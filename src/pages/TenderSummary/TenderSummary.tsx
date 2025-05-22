@@ -204,7 +204,7 @@ const useReanalyzeSection = () => {
       sectionName: string; 
       orgName?: string; 
     }) => {
-      let url = `http://localhost:8000/analyze-tender-section?tender_id=${tenderId}&user_id=123&section_name=${sectionName}`;
+      let url = `http://192.168.2.71:8000/analyze-tender-section?tender_id=${tenderId}&user_id=123&section_name=${sectionName}`;
       if (orgName) {
         url += `&org_name=${encodeURIComponent(orgName)}`;
       }
@@ -1051,7 +1051,7 @@ const TenderSummary = () => {
       
               try {
           // Fetch tender details including PDF URL
-          let url = `http://localhost:8000/tender/${id}?user_id=123`;
+          let url = `http://192.168.2.71:8000/tender/${id}?user_id=123`;
           // Always use lepton as the default org_name if none is provided
           const effectiveOrgName = orgName || 'lepton';
           url += `&org_name=${encodeURIComponent(effectiveOrgName)}`;
@@ -1143,7 +1143,7 @@ const TenderSummary = () => {
     
     setAnalyzing(true);
     try {
-      let analyzeUrl = `http://localhost:8000/analyze-tender?tender_id=${id}&user_id=123`;
+      let analyzeUrl = `http://192.168.2.71:8000/analyze-tender?tender_id=${id}&user_id=123`;
       if (orgName) {
         analyzeUrl += `&org_name=${encodeURIComponent(orgName)}`;
       }
@@ -1172,7 +1172,7 @@ const TenderSummary = () => {
     const fetchDocuments = async () => {
       try {
         // Check if the files endpoint exists
-        const response = await fetch('http://localhost:8000/files?user_id=123');
+        const response = await fetch('http://192.168.2.71:8000/files?user_id=123');
         if (response.ok) {
         const data = await response.json();
         setDocuments(data);
@@ -1201,7 +1201,7 @@ const TenderSummary = () => {
 
   const fetchUploadedDocuments = async (tenderId: string) => {
     try {
-      const response = await fetch(`http://localhost:8000/tender-documents/${tenderId}`);
+      const response = await fetch(`http://192.168.2.71:8000/tender-documents/${tenderId}`);
       if (response.ok) {
       const data = await response.json();
       setUploadedDocuments(data.uploaded_files || {});
@@ -1229,7 +1229,7 @@ const TenderSummary = () => {
         delete newUploadedFiles[documentIndex];
       }
 
-      const response = await fetch(`http://localhost:8000/tender-documents/${tenderId}`, {
+      const response = await fetch(`http://192.168.2.71:8000/tender-documents/${tenderId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -1287,7 +1287,7 @@ const TenderSummary = () => {
       formData.append('format_instructions', doc.formatSpecificInstructions || '');
       formData.append('submission_note', doc.submissionNote || '');
 
-      const response = await fetch('http://localhost:8000/ai-recommend/', {
+      const response = await fetch('http://192.168.2.71:8000/ai-recommend/', {
         method: 'POST',
         body: formData,
       });
@@ -1341,7 +1341,7 @@ const TenderSummary = () => {
     
     try {
       // First, check if AI recommendation endpoint exists
-      const testResponse = await fetch('http://localhost:8000/ai-recommend/', {
+      const testResponse = await fetch('http://192.168.2.71:8000/ai-recommend/', {
         method: 'POST',
         body: new FormData() // Empty form data for test
       });
@@ -1364,7 +1364,7 @@ const TenderSummary = () => {
         formData.append('format_instructions', doc.formatSpecificInstructions || '');
         formData.append('submission_note', doc.submissionNote || '');
 
-        const response = await fetch('http://localhost:8000/ai-recommend/', {
+        const response = await fetch('http://192.168.2.71:8000/ai-recommend/', {
           method: 'POST',
           body: formData,
         });
@@ -1397,7 +1397,7 @@ const TenderSummary = () => {
       });
 
       // Update all documents at once on the backend
-      const response = await fetch(`http://localhost:8000/tender-documents/${id}`, {
+      const response = await fetch(`http://192.168.2.71:8000/tender-documents/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -1448,7 +1448,7 @@ const TenderSummary = () => {
       formData.append('tender_id', id);
 
       console.log('Sending request to backend...');
-      const response = await fetch('http://localhost:8000/upload', {
+      const response = await fetch('http://192.168.2.71:8000/upload', {
         method: 'POST',
         body: formData,
       });
@@ -1480,7 +1480,7 @@ const TenderSummary = () => {
       await handleDocumentSelect(docIndex, newDocument);
 
       // Refresh documents list
-      const docsResponse = await fetch('http://localhost:8000/files?user_id=123');
+      const docsResponse = await fetch('http://192.168.2.71:8000/files?user_id=123');
       if (docsResponse.ok) {
         const docsData = await response.json();
         setDocuments(docsData);
@@ -2453,17 +2453,17 @@ const TenderSummary = () => {
                       </div>
                       <div className="ml-9">
                         <div className="space-y-4">
-                          <div>
-                            <h6 className="text-sm font-medium text-gray-700 mb-2">Activities:</h6>
-                            <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                              {(task.activities || []).map((activity: string, actIndex: number) => (
-                                <li key={actIndex} className="flex items-start">
-                                  <span className="w-2 h-2 bg-green-500 rounded-full mt-2 mr-2 flex-shrink-0"></span>
-                                  <span className="text-sm text-gray-600">{activity}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
+                            <div>
+                              <h6 className="text-sm font-medium text-gray-700 mb-2">Activities:</h6>
+                              <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {(task.activities || []).map((activity: string, actIndex: number) => (
+                                  <li key={actIndex} className="flex items-start">
+                                    <span className="w-2 h-2 bg-green-500 rounded-full mt-2 mr-2 flex-shrink-0"></span>
+                                    <span className="text-sm text-gray-600">{activity}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
                           {task.technical_specifications && (
                             <div className="bg-white rounded-lg p-4 border border-gray-100">
                               <h6 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
