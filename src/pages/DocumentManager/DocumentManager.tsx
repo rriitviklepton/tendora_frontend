@@ -146,7 +146,7 @@ const DocumentManager = () => {
   const fetchDocuments = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:8000/files?user_id=123');
+      const response = await fetch('https://api.smarttender.rio.software/api/files?user_id=123');
       if (!response.ok) {
         throw new Error('Failed to fetch documents');
       }
@@ -181,7 +181,7 @@ const DocumentManager = () => {
           formData.append('tender_id', tenderId);
         }
 
-        const response = await fetch('http://localhost:8000/upload', {
+        const response = await fetch('https://api.smarttender.rio.software/api/upload', {
           method: 'POST',
           body: formData,
         });

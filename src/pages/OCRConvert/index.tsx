@@ -32,7 +32,7 @@ const OCRConvert: React.FC = () => {
     formData.append('user_id', '1'); // Replace with actual user ID from your auth system
     
     try {
-      const response = await axios.post('http://localhost:8000/ocr-conversion', formData, {
+      const response = await axios.post('https://api.smarttender.rio.software/api/ocr-conversion', formData, {
         responseType: 'blob',
         headers: {
           'Content-Type': 'multipart/form-data',

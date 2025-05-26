@@ -110,7 +110,7 @@ const UploadArea = () => {
       formData.append('org_name', orgName.trim());
       formData.append('ocr_required', ocrRequired.toString());
       
-      const response = await fetch('http://localhost:8000/upload-tender', {
+      const response = await fetch('https://api.smarttender.rio.software/api/upload-tender', {
         method: 'POST',
         body: formData,
       });
@@ -174,7 +174,7 @@ const UploadArea = () => {
       setStatusInterval(interval);
 
       // Now make the analyze request
-      const analyzeUrl = `http://localhost:8000/analyze-tender?tender_id=${tenderId}&user_id=123&org_name=${encodeURIComponent(orgName.trim())}`;
+      const analyzeUrl = `https://api.smarttender.rio.software/api/analyze-tender?tender_id=${tenderId}&user_id=123&org_name=${encodeURIComponent(orgName.trim())}`;
       console.log('Sending analyze request to:', analyzeUrl);
       
       // Fire and forget the analyze request
@@ -217,7 +217,7 @@ const UploadArea = () => {
     console.log('fetchSectionStatus executing for tenderId:', tenderId);
     
     try {
-      const statusUrl = `http://localhost:8000/section-status?tender_id=${tenderId}&user_id=123&org_name=${encodeURIComponent(orgName.trim())}`;
+      const statusUrl = `https://api.smarttender.rio.software/api/section-status?tender_id=${tenderId}&user_id=123&org_name=${encodeURIComponent(orgName.trim())}`;
       console.log('Making request to:', statusUrl);
       
       const response = await fetch(statusUrl);

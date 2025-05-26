@@ -20,7 +20,7 @@ function GeminiSessionChat() {
     };
 
     try {
-      const res = await fetch("http://localhost:8000/stream", {
+      const res = await fetch("https://api.smarttender.rio.software/api/stream", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
