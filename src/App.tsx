@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Layout from './components/Layout/Layout';
@@ -39,6 +39,13 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 function App() {
+  useEffect(() => {
+    // Only inject in development or staging — NOT in production
+    if (import.meta.env.VITE_ENABLE_TOOLBAR === 'true') {
+      import('@vercel/toolbar').then(({ inject }) => inject());
+    }
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <TenderProvider>
