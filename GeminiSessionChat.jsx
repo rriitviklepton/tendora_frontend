@@ -20,13 +20,13 @@ function GeminiSessionChat() {
     };
 
     try {
-      const res = await fetch("https://api.smarttender.rio.software/api/stream", {
+      const res = await fetch("http://  :8000/chatbot/stream", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
 
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);

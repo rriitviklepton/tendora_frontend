@@ -174,7 +174,7 @@ const UploadArea = () => {
       setStatusInterval(interval);
 
       // Now make the analyze request
-      const analyzeUrl = `https://api.smarttender.rio.software/api/analyze-tender?tender_id=${tenderId}&user_id=123&org_name=${encodeURIComponent(orgName.trim())}`;
+      const analyzeUrl = `https://api.smarttender.rio.software/tenderanalysis/analyze-tender?tender_id=${tenderId}&user_id=123&org_name=${encodeURIComponent(orgName.trim())}`;
       console.log('Sending analyze request to:', analyzeUrl);
       
       // Fire and forget the analyze request

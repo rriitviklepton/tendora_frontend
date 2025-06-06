@@ -30,7 +30,7 @@ export function GeminiSessionChat() {
     setMessages(prev => [...prev, userMessage]);
     
     try {
-      const response = await fetch("https://api.smarttender.rio.software/api/stream", {
+      const response = await fetch("https://api.smarttender.rio.software/chatbot/stream", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

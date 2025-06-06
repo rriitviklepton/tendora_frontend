@@ -19,7 +19,7 @@ const DeadlinesTracker = () => {
   useEffect(() => {
     const fetchDeadlines = async () => {
       try {
-        const response = await fetch('https://api.smarttender.rio.software/api/tender-deadlines');
+        const response = await fetch('https://api.smarttender.rio.software//tender-deadlines');
         if (!response.ok) {
           throw new Error('Failed to fetch deadlines');
         }

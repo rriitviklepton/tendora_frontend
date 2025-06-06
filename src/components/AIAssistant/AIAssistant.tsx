@@ -153,7 +153,7 @@ const AIAssistant = ({ open, setOpen }: AIAssistantProps) => {
   // Initialize session when tender is selected
   const initializeSession = async (sessionId: string, tenderId?: number) => {
     try {
-      const response = await fetch(`https://api.smarttender.rio.software/api/create-session?session_id=${sessionId}`, {
+      const response = await fetch(`https://api.smarttender.rio.software/chatbot/create-session?session_id=${sessionId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -247,7 +247,7 @@ const AIAssistant = ({ open, setOpen }: AIAssistantProps) => {
     
     return () => {
       if (currentSessionId) {
-        fetch(`https://api.smarttender.rio.software/api/session/${currentSessionId}`, {
+        fetch(`https://api.smarttender.rio.software/chatbot/session/${currentSessionId}`, {
           method: 'DELETE'
         }).catch(error => {
           console.error('Error cleaning up session:', error);
@@ -282,7 +282,7 @@ const AIAssistant = ({ open, setOpen }: AIAssistantProps) => {
 
       console.log('Sending request to AI Assistant:', payload);
 
-      const response = await fetch("https://api.smarttender.rio.software/api/stream", {
+      const response = await fetch("https://api.smarttender.rio.software/chatbot/stream", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

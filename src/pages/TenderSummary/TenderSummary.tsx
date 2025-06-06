@@ -45,7 +45,8 @@ import {
   Shield,
   User,
   Check,
-  ListTodo
+  ListTodo,
+  Ruler
 } from 'lucide-react';
 import StatusBadge from '../../components/UI/StatusBadge';
 import { getTimeRemaining, formatCurrency } from '../../utils/helpers';
@@ -94,7 +95,11 @@ interface ComplianceRequirement {
     evaluation_weightage: number | null;
   };
   submission_details: {
-    submission_format: string | null;
+    submission_format: {
+      format_type: string | null;
+      number_of_copies: string | number | null;
+      special_instructions: string | null;
+    } | string | null;
     submission_stage: string | null;
     special_instructions: string | null;
   };
@@ -576,7 +581,11 @@ interface TenderInfo {
       evaluation_weightage: number | null;
     };
     submission_details: {
-      submission_format: string | null;
+      submission_format: {
+        format_type: string | null;
+        number_of_copies: string | number | null;
+        special_instructions: string | null;
+      } | string | null;
       submission_stage: string | null;
       special_instructions: string | null;
     };
@@ -796,6 +805,155 @@ const ELIGIBILITY_TABS = [
   { id: 'disqualification', name: 'Disqualification', icon: AlertTriangle }
 ];
 
+// Add these interfaces at the top of the file with other interfaces
+interface EvaluationStage {
+  stage_name: string;
+  stage_type: string;
+  sequence_number: string | number;
+  description: string;
+  is_eliminatory: boolean;
+}
+
+interface TechnicalParameter {
+  parameter_name: string;
+  max_marks: string | number | null;
+  scoring_method: string | null;
+  supporting_documents: string | null;
+  evaluation_notes: string | null;
+}
+
+interface ScoringMatrixCategory {
+  criteria_category: string;
+  parameters: TechnicalParameter[];
+  category_weightage: string | number;
+}
+
+interface DisqualificationCriteria {
+  criteria: string;
+  stage: string | null;
+  verification_method: string | null;
+}
+
+// Add these type definitions at the top of the file with other interfaces
+interface SpecificRequirements {
+  L1_specific: string | null;
+  qcbs_specific: {
+    technical_weightage: string;
+    financial_weightage: string;
+    scoring_formula: string;
+  } | null;
+  qbs_specific: string | null;
+  fbs_specific: string | null;
+  lcs_specific: string | null;
+  sss_specific: string | null;
+  era_specific: string | null;
+}
+
+interface SelectionMethod {
+  primary_criteria: string;
+  tie_breaker: string | null;
+  negotiation_terms: string | null;
+}
+
+// Add these type definitions at the top of the file with other interfaces
+interface EvaluationData {
+  evaluation_type: {
+    type: string | null;
+    description: string | null;
+    justification: string | null;
+  } | null;
+  stages: Array<{
+    stage_name: string | null;
+    stage_type: string | null;
+    sequence_number: string | number | null;
+    description: string | null;
+    is_eliminatory: boolean | null;
+  }> | null;
+  technical_evaluation: {
+    weightage: number | null;
+    minimum_qualifying_score: number | null;
+    scoring_matrix: Array<{
+      criteria_category: string | null;
+      parameters: Array<{
+        parameter_name: string | null;
+        max_marks: number | null;
+        scoring_method: string | null;
+        supporting_documents: string | null;
+        evaluation_notes: string | null;
+      }> | null;
+      category_weightage: number | null;
+    }> | null;
+    scoring_formula: string | null;
+    normalization_method: string | null;
+  } | null;
+  financial_evaluation: {
+    weightage: number | null;
+    bid_format: string | null;
+    components: Array<{
+      component_name: string | null;
+      is_mandatory: boolean | null;
+      weightage: number | null;
+    }> | null;
+    scoring_formula: string | null;
+    normalization_method: string | null;
+  } | null;
+  composite_scoring: {
+    formula: string | null;
+    example_calculation: string | null;
+    special_conditions: string[] | null;
+  } | null;
+  selection_method: {
+    primary_criteria: string | null;
+    tie_breaker: string | null;
+    negotiation_terms: string | null;
+  } | null;
+  disqualification_criteria: Array<{
+    criteria: string | null;
+    stage: string | null;
+    verification_method: string | null;
+  }> | null;
+  specific_requirements: {
+    L1_specific: {
+      price_preference: string | null;
+      purchase_preference: string | null;
+      msme_benefits: string | null;
+    } | null;
+    qcbs_specific: {
+      technical_weightage: number | null;
+      financial_weightage: number | null;
+      scoring_formula: string | null;
+    } | null;
+    qbs_specific: {
+      negotiation_process: string | null;
+      fallback_options: string | null;
+    } | null;
+    fbs_specific: {
+      budget_ceiling: number | null;
+      compliance_requirements: string | null;
+    } | null;
+    lcs_specific: {
+      technical_threshold: number | null;
+      cost_evaluation_method: string | null;
+    } | null;
+    sss_specific: {
+      justification: string | null;
+      approval_requirements: string | null;
+    } | null;
+    era_specific: {
+      auction_rules: string | null;
+      decrement_value: number | null;
+      duration: number | null;
+    } | null;
+  } | null;
+}
+
+// Add this interface near the top of the file with other interfaces
+interface SubmissionFormat {
+  format_type?: string | null;
+  number_of_copies?: string | number | null;
+  special_instructions?: string | null;
+}
+
 const TenderSummary = () => {
   const { id } = useParams<{ id: string }>();
   const [loading, setLoading] = useState(true);
@@ -829,6 +987,10 @@ const TenderSummary = () => {
   const [currentPdfPage, setCurrentPdfPage] = useState<number | null>(null);
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
   const [activeEligibilityTab, setActiveEligibilityTab] = useState('legal');
+  // Add this near the top of the component with other state declarations
+  const [expandedTasks, setExpandedTasks] = useState<number[]>([]);
+  // Add this near the top with other state declarations
+  const [expandedDeliverables, setExpandedDeliverables] = useState<number[]>([]);
   
   // Add useEffect for initial tab selection
   useEffect(() => {
@@ -1143,7 +1305,7 @@ const TenderSummary = () => {
     
     setAnalyzing(true);
     try {
-      let analyzeUrl = `https://api.smarttender.rio.software/api/analyze-tender?tender_id=${id}&user_id=123`;
+      let analyzeUrl = `https://api.smarttender.rio.software/tenderanalysis/analyze-tender?tender_id=${id}&user_id=123`;
       if (orgName) {
         analyzeUrl += `&org_name=${encodeURIComponent(orgName)}`;
       }
@@ -1548,7 +1710,19 @@ const TenderSummary = () => {
       if (typeof cell === 'string') return cell.trim();
       if (typeof cell === 'number') return cell.toString();
       if (typeof cell === 'boolean') return cell.toString();
-      if (typeof cell === 'object') return JSON.stringify(cell);
+      if (typeof cell === 'object') {
+        // Handle object values by extracting meaningful information
+        const values = Object.values(cell)
+          .filter(val => val !== null && val !== undefined)
+          .map(val => {
+            if (typeof val === 'object') {
+              // For nested objects, just show a summary
+              return 'Details available';
+            }
+            return String(val);
+          });
+        return values.join(', ') || '-';
+      }
       return String(cell);
     };
 
@@ -2027,221 +2201,109 @@ const TenderSummary = () => {
           );
         }
 
-        // Handle evaluation criteria group
-        if (firstItem.criteriaParameter) {
-          return (
-            <div key={group.id} className="mb-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {group.items.map((item: any, index: number) => (
-                  <div 
-                    key={index} 
-                    className="group relative bg-white rounded-xl shadow-sm border border-gray-100 p-5 transition-all duration-200 hover:shadow-md hover:-translate-y-1 hover:border-blue-200"
-                  >
-                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-t-xl"></div>
-                    <div className="space-y-4">
-                      <div>
-                        <h4 className="text-lg font-semibold text-gray-900 mb-1">{item.criteriaParameter}</h4>
-                        {item.maxMarksWeightage && (
-                          <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-50 text-blue-700">
-                            <Calculator size={14} className="mr-1" />
-                            Weightage: {item.maxMarksWeightage}
-                          </div>
-                        )}
-                      </div>
-                      {item.subCriteriaNotes && (
-                        <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-600">
-                          <div className="flex items-start">
-                            <Info size={16} className="mr-2 mt-0.5 flex-shrink-0 text-gray-400" />
-                            <p className="whitespace-pre-wrap">{item.subCriteriaNotes}</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        }
-
         return null;
       });
     }
 
-    // Handle evaluation criteria section specific structure
-    if (data.technicalEvaluation || data.minimumTechnicalScore || data.financialEvaluation) {
+    // Handle object data by converting it to a list of key-value pairs
+    if (typeof data === 'object' && !Array.isArray(data)) {
+      const entries = Object.entries(data);
+      if (entries.length === 0) return null;
+
+      // Special handling for specific_requirements
+      if ('specific_requirements' in data) {
+        const specificReqs = data.specific_requirements;
+        if (!specificReqs) return null;
+
       return (
+          <div className="mb-8 bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:border-blue-200 transition-all duration-200">
+            <h4 className="text-base font-medium text-gray-900 mb-4">Specific Requirements</h4>
         <div className="space-y-6">
-          {/* Evaluation Stages */}
-          {data.evaluationStages && (
-            <div className="mb-8">
-              <div className="flex items-center justify-between mb-6">
-                <h4 className="text-base font-semibold text-gray-900">Evaluation Stages</h4>
-                <div className="flex items-center text-sm text-gray-500">
-                  <FileText size={16} className="mr-1" />
-                  <span>Process Overview</span>
-                </div>
-              </div>
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:border-blue-200 transition-all duration-200">
-                <div className="prose max-w-none">
-                  <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">{data.evaluationStages}</p>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          {/* Eligibility & Qualifying Criteria */}
-          {data.eligibilityQualifyingCriteria && (
-            <div className="mb-8">
-              <div className="flex items-center justify-between mb-6">
-                <h4 className="text-base font-semibold text-gray-900">Eligibility & Qualifying Criteria</h4>
-                <div className="flex items-center text-sm text-gray-500">
-                  <CheckSquare size={16} className="mr-1" />
-                  <span>Qualification Requirements</span>
-                </div>
-              </div>
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:border-blue-200 transition-all duration-200">
-                <div className="prose max-w-none">
-                  <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">{data.eligibilityQualifyingCriteria}</p>
-                </div>
-              </div>
-            </div>
-          )}
+              {Object.entries(specificReqs).map(([key, value]) => {
+                // Skip if the value is null
+                if (!value) return null;
 
-          {/* Technical Evaluation Section - Keep existing implementation */}
-          {Array.isArray(data.technicalEvaluation) && data.technicalEvaluation.length > 0 && (
-            <div className="mb-8">
-              <div className="flex items-center justify-between mb-6">
-                <h4 className="text-base font-semibold text-gray-900">Technical Evaluation Criteria</h4>
-                <div className="flex items-center text-sm text-gray-500">
-                  <PieChart size={16} className="mr-1" />
-                  <span>{data.technicalEvaluation.length} Criteria</span>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {data.technicalEvaluation.map((criteria: any, index: number) => (
-                  <div 
-                    key={index} 
-                    className="group relative bg-white rounded-xl shadow-sm border border-gray-100 p-5 transition-all duration-200 hover:shadow-md hover:-translate-y-1 hover:border-blue-200"
-                  >
-                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-t-xl"></div>
-                    <div className="space-y-4">
-                      <div>
-                        <h5 className="text-lg font-semibold text-gray-900 mb-1">{criteria.criteriaParameter}</h5>
-                        {criteria.maxMarksWeightage && (
-                          <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-50 text-blue-700">
-                            <Calculator size={14} className="mr-1" />
-                            Weightage: {criteria.maxMarksWeightage}
-                          </div>
-                        )}
-                      </div>
-                      {criteria.subCriteriaNotes && (
-                        <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-600">
-                          <div className="flex items-start">
-                            <Info size={16} className="mr-2 mt-0.5 flex-shrink-0 text-gray-400" />
-                            <p className="whitespace-pre-wrap">{criteria.subCriteriaNotes}</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+                // Format the key for display
+                const displayKey = key.split('_')[0].toUpperCase();
 
-          {/* Minimum Technical Score */}
-          {data.minimumTechnicalScore && (
-            <div className="mb-8">
-              <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-100">
-                <div className="flex items-start space-x-4">
-                  <div className="flex-shrink-0">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <CheckSquare size={24} className="text-blue-600" />
-                    </div>
-                  </div>
-                  <div>
-                    <h4 className="text-base font-semibold text-gray-900 mb-2">Minimum Technical Score Required</h4>
-                    <div className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-white text-blue-700 shadow-sm">
-                      <Calculator size={16} className="mr-2" />
-                      {data.minimumTechnicalScore}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+                // Handle the case where value is an object
+                if (typeof value === 'object') {
+                  // Check if all values in the object are null
+                  const hasNonNullValue = Object.values(value).some(v => v !== null);
+                  if (!hasNonNullValue) return null;
 
-          {/* Financial Evaluation */}
-          {data.financialEvaluation && (
-            <div className="mb-8">
-              <div className="flex items-center justify-between mb-6">
-                <h4 className="text-base font-semibold text-gray-900">Financial Evaluation</h4>
-                <div className="flex items-center text-sm text-gray-500">
-                  <DollarSign size={16} className="mr-1" />
-                  <span>Financial Assessment</span>
+                  return (
+                    <div key={key} className="bg-gray-50 rounded-lg p-4">
+                      <h5 className="text-sm font-medium text-gray-900 mb-3">{displayKey} Specific Requirements</h5>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {Object.entries(value).map(([subKey, subValue]) => {
+                          if (subValue === null) return null;
+                          
+                          return (
+                            <div key={subKey} className="bg-white rounded p-3 shadow-sm">
+                              <p className="text-xs text-gray-500 mb-1 capitalize">
+                                {subKey.replace(/_/g, ' ')}
+                              </p>
+                              <p className="text-sm text-gray-900">{String(subValue)}</p>
                 </div>
+                          );
+                        })}
               </div>
-              <div className="group relative bg-white rounded-xl shadow-sm border border-gray-100 p-6 transition-all duration-200 hover:shadow-md hover:border-blue-200">
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-green-500 to-blue-500 rounded-t-xl"></div>
-                <div className="prose max-w-none">
-                  <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">{data.financialEvaluation}</p>
                 </div>
-              </div>
-            </div>
-          )}
+                  );
+                }
 
-          {/* Overall Selection Method */}
-          {data.overallSelectionMethod && (
-            <div className="mb-8">
-              <div className="flex items-center justify-between mb-6">
-                <h4 className="text-base font-semibold text-gray-900">Overall Selection Method</h4>
-                <div className="flex items-center text-sm text-gray-500">
-                  <PieChart size={16} className="mr-1" />
-                  <span>Selection Process</span>
+                // Handle the case where value is a primitive
+                return (
+                  <div key={key} className="bg-gray-50 rounded-lg p-4">
+                    <h5 className="text-sm font-medium text-gray-900">{displayKey} Specific Requirements</h5>
+                    <p className="text-sm text-gray-600 mt-2">{String(value)}</p>
                 </div>
+                );
+              })}
               </div>
-              <div className="group relative bg-white rounded-xl shadow-sm border border-gray-100 p-6 transition-all duration-200 hover:shadow-md hover:border-blue-200">
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 to-blue-500 rounded-t-xl"></div>
-                <div className="prose max-w-none">
-                  <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">{data.overallSelectionMethod}</p>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       );
     }
 
-    // Handle scope of work specific structure
-    if (data.contentType) {
-      const contentItems = [];
-      
-      // Add description if present
-      if (data.description) {
-        contentItems.push({
-          itemText: data.description,
-          formatHint: 'text'
-        });
-      }
+      return (
+        <div className="mb-8 bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:border-blue-200 transition-all duration-200">
+          <div className="space-y-4">
+            {entries.map(([key, value], index) => {
+              // Skip rendering if value is null, undefined, or an empty object/array
+              if (value === null || value === undefined || 
+                 (typeof value === 'object' && Object.keys(value).length === 0) ||
+                 (Array.isArray(value) && value.length === 0)) {
+                return null;
+              }
 
-      // Add list items if present
-      if (data.listItems && Array.isArray(data.listItems)) {
-        contentItems.push(...data.listItems.map((item: string) => ({
-          itemText: item,
-          formatHint: 'list_item'
-        })));
-      }
+              // If value is an object or array, recursively render it
+              if (typeof value === 'object') {
+                return (
+                  <div key={index} className="space-y-2">
+                    <h4 className="text-sm font-medium text-gray-900 capitalize">
+                      {key.replace(/_/g, ' ')}
+                    </h4>
+                    {renderContentSection(value)}
+                  </div>
+                );
+              }
 
-      // Add table data if present
-      if (data.contentType === 'table' && data.tableData) {
-        contentItems.push({
-          formatHint: 'table_block',
-          tableData: data.tableData
-        });
-      }
-
-      return renderContentSection(contentItems);
+              // Render primitive values
+              return (
+                <div key={index} className="flex flex-col">
+                  <span className="text-sm font-medium text-gray-900 capitalize">
+                    {key.replace(/_/g, ' ')}
+                  </span>
+                  <span className="text-sm text-gray-600 mt-1">
+                    {String(value)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
     }
 
     return null;
@@ -2440,21 +2502,45 @@ const TenderSummary = () => {
                   <ListTodo className="mr-2 text-green-500" size={20} />
                   Detailed Tasks
                 </h4>
-                <div className="space-y-8">
+                <div className="space-y-4">
                   {(scopeData.detailed_tasks || []).map((task: any, index: number) => (
-                    <div key={index} className="group relative bg-gray-50 rounded-lg p-6">
-                      <div className="flex items-start justify-between mb-4">
-                        <h5 className="text-base font-medium text-gray-900 flex items-center">
-                          <span className="flex items-center justify-center w-6 h-6 rounded-full bg-green-100 text-green-600 text-xs font-semibold mr-3">
+                    <div key={index} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                      <button
+                        onClick={() => setExpandedTasks(prev => 
+                          prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]
+                        )}
+                        className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors duration-150"
+                      >
+                        <div className="flex items-center">
+                          <span className="flex items-center justify-center w-8 h-8 rounded-full bg-green-100 text-green-600 text-sm font-semibold mr-3">
                             {index + 1}
                           </span>
-                          {task.task_category}
-                        </h5>
+                          <h5 className="text-base font-medium text-gray-900">{task.task_category}</h5>
                       </div>
-                      <div className="ml-9">
+                        <div className="flex items-center space-x-2">
+                          {task.technical_specifications && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              Tech Specs
+                            </span>
+                          )}
+                          {task.dependencies && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                              Dependencies
+                            </span>
+                          )}
+                          {expandedTasks.includes(index) ? (
+                            <ChevronDown className="h-5 w-5 text-gray-400" />
+                          ) : (
+                            <ChevronRight className="h-5 w-5 text-gray-400" />
+                          )}
+                        </div>
+                      </button>
+
+                      {expandedTasks.includes(index) && (
+                        <div className="border-t border-gray-200 px-6 py-4">
                         <div className="space-y-4">
                             <div>
-                              <h6 className="text-sm font-medium text-gray-700 mb-2">Activities:</h6>
+                              <h6 className="text-sm font-medium text-gray-700 mb-3">Activities:</h6>
                               <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 {(task.activities || []).map((activity: string, actIndex: number) => (
                                   <li key={actIndex} className="flex items-start">
@@ -2464,8 +2550,9 @@ const TenderSummary = () => {
                                 ))}
                               </ul>
                             </div>
+
                           {task.technical_specifications && (
-                            <div className="bg-white rounded-lg p-4 border border-gray-100">
+                              <div className="bg-blue-50 rounded-lg p-4">
                               <h6 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
                                 <Code className="mr-2 text-blue-500" size={16} />
                                 Technical Specifications
@@ -2473,8 +2560,9 @@ const TenderSummary = () => {
                               <p className="text-sm text-gray-600 leading-relaxed">{task.technical_specifications}</p>
                             </div>
                           )}
+
                           {task.dependencies && (
-                            <div className="bg-white rounded-lg p-4 border border-gray-100">
+                              <div className="bg-purple-50 rounded-lg p-4">
                               <h6 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
                                 <GitBranch className="mr-2 text-purple-500" size={16} />
                                 Dependencies
@@ -2484,6 +2572,7 @@ const TenderSummary = () => {
                           )}
                         </div>
                       </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -2496,34 +2585,75 @@ const TenderSummary = () => {
                   <Package className="mr-2 text-orange-500" size={20} />
                   Deliverables
                 </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                <div className="space-y-4">
                   {(scopeData.deliverables || []).map((deliverable: any, index: number) => (
-                    <div key={index} className="group relative bg-gray-50 rounded-lg p-6 flex flex-col min-h-[250px] max-h-[400px]">
-                      <div className="mb-4">
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                          {deliverable.frequency || 'One-time'}
+                    <div key={index} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                      <button
+                        onClick={() => setExpandedDeliverables(prev => 
+                          prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]
+                        )}
+                        className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors duration-150"
+                      >
+                        <div className="flex items-center">
+                          <span className="flex items-center justify-center w-8 h-8 rounded-full bg-orange-100 text-orange-600 text-sm font-semibold mr-3">
+                            {index + 1}
                         </span>
+                          <h5 className="text-base font-medium text-gray-900">{deliverable.name}</h5>
                       </div>
-                      <h5 className="text-sm font-medium text-gray-900 mb-3">{deliverable.name || 'Untitled Deliverable'}</h5>
-                      <div className="flex-grow mb-4 overflow-y-auto">
-                        <p className="text-sm text-gray-600 whitespace-pre-wrap break-words">{deliverable.description || 'No description provided'}</p>
+                        <div className="flex items-center space-x-2">
+                          {deliverable.frequency && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              {deliverable.frequency}
+                            </span>
+                          )}
+                          {expandedDeliverables.includes(index) ? (
+                            <ChevronDown className="h-5 w-5 text-gray-400" />
+                          ) : (
+                            <ChevronRight className="h-5 w-5 text-gray-400" />
+                          )}
                       </div>
-                      <div className="space-y-3 pt-2 border-t border-gray-200">
-                        {deliverable.format && (
-                          <div className="flex items-start text-xs">
-                            <FileText size={12} className="text-gray-400 mr-2 flex-shrink-0 mt-0.5" />
-                            <span className="text-gray-500 break-words">{deliverable.format}</span>
+                      </button>
+
+                      {expandedDeliverables.includes(index) && (
+                        <div className="border-t border-gray-200 px-6 py-4">
+                          <div className="space-y-4">
+                            <div className="bg-gray-50 rounded-lg p-4">
+                              <h6 className="text-sm font-medium text-gray-700 mb-2">Description</h6>
+                              <p className="text-sm text-gray-600 leading-relaxed">{deliverable.description}</p>
+                            </div>
+
+                            {deliverable.frequency && (
+                              <div className="bg-green-50 rounded-lg p-4">
+                                <h6 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
+                                  <Clock className="mr-2 text-green-500" size={16} />
+                                  Frequency
+                                </h6>
+                                <p className="text-sm text-gray-600">{deliverable.frequency}</p>
                           </div>
                         )}
+
                         {deliverable.acceptance_criteria && (
-                          <div className="flex items-start text-xs">
-                            <CheckCircle size={12} className="text-gray-400 mr-2 flex-shrink-0 mt-0.5" />
-                            <span className="text-gray-500 break-words">{deliverable.acceptance_criteria}</span>
+                              <div className="bg-purple-50 rounded-lg p-4">
+                                <h6 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
+                                  <CheckSquare className="mr-2 text-purple-500" size={16} />
+                                  Acceptance Criteria
+                                </h6>
+                                <p className="text-sm text-gray-600 leading-relaxed">{deliverable.acceptance_criteria}</p>
                           </div>
                         )}
                       </div>
+                        </div>
+                      )}
                     </div>
                   ))}
+
+                  {(!scopeData.deliverables || scopeData.deliverables.length === 0) && (
+                    <div className="text-center py-8 bg-gray-50 rounded-lg">
+                      <Package className="mx-auto h-12 w-12 text-gray-400" />
+                      <h3 className="mt-2 text-sm font-medium text-gray-900">No Deliverables</h3>
+                      <p className="mt-1 text-sm text-gray-500">No deliverables have been specified for this project.</p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -2635,22 +2765,38 @@ const TenderSummary = () => {
                     <div className="space-y-4">
                       <div className="bg-gray-50 rounded-lg p-4">
                         <h6 className="text-sm font-medium text-gray-700 mb-2">Team Structure</h6>
-                        <p className="text-sm text-gray-600">{scopeData.resources.manpower.team_structure}</p>
+                        <p className="text-sm text-gray-600">{scopeData.resources?.manpower?.team_structure || 'Not specified'}</p>
                       </div>
                       <div className="bg-gray-50 rounded-lg p-4">
                         <h6 className="text-sm font-medium text-gray-700 mb-2">Key Personnel</h6>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                          {(scopeData.resources?.manpower?.key_personnel || []).map((person: string, index: number) => (
+                          {(scopeData.resources?.manpower?.key_personnel || []).map((person: any, index: number) => (
                             <div key={index} className="flex items-center">
                               <User size={14} className="text-pink-500 mr-2" />
-                              <span className="text-sm text-gray-600">{person || 'Unnamed Personnel'}</span>
+                              <span className="text-sm text-gray-600">
+                                {typeof person === 'object' ? (
+                                  <div className="space-y-1">
+                                    <div>Role: {person.role || 'Not specified'}</div>
+                                    <div>Qualifications: {person.qualifications || 'Not specified'}</div>
+                                    <div>Experience: {person.experience || 'Not specified'}</div>
+                                    {person.certifications && (
+                                      <div>Certifications: {person.certifications}</div>
+                                    )}
+                                    {person.minimum_number && (
+                                      <div>Minimum Number: {person.minimum_number}</div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  person || 'Unnamed Personnel'
+                                )}
+                              </span>
                             </div>
                           ))}
                         </div>
                       </div>
                       <div className="bg-gray-50 rounded-lg p-4">
                         <h6 className="text-sm font-medium text-gray-700 mb-2">Minimum Qualifications</h6>
-                        <p className="text-sm text-gray-600">{scopeData.resources.manpower.minimum_qualifications}</p>
+                        <p className="text-sm text-gray-600">{scopeData.resources?.manpower?.minimum_qualifications || 'Not specified'}</p>
                       </div>
                     </div>
                   </div>
@@ -2697,43 +2843,62 @@ const TenderSummary = () => {
                   Performance Standards
                 </h4>
                 <div className="space-y-6">
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Parameter</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Target</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Measurement</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Penalty</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
+                  {/* Service Levels */}
+                  <div className="grid grid-cols-1 gap-4">
                         {(scopeData?.performance_standards?.service_levels || []).map((level: any, index: number) => (
-                          <tr key={index} className="hover:bg-gray-50">
-                            <td className="px-6 py-4">
+                      <div key={index} className="bg-white rounded-lg border border-gray-200 p-5 hover:border-yellow-200 transition-all duration-200">
+                        <div className="flex items-start justify-between mb-4">
                               <div className="flex items-center">
-                                <span className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></span>
-                                <span className="text-sm font-medium text-gray-900">{level?.parameter || 'Unnamed Parameter'}</span>
+                            <div className="flex-shrink-0">
+                              <div className="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center">
+                                <Target className="h-5 w-5 text-yellow-600" />
                               </div>
-                            </td>
-                            <td className="px-6 py-4 text-sm text-gray-600">{level?.target || 'Not specified'}</td>
-                            <td className="px-6 py-4 text-sm text-gray-600">{level?.measurement || '-'}</td>
-                            <td className="px-6 py-4">
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                {level?.penalty || 'Not specified'}
+                            </div>
+                            <div className="ml-4">
+                              <h3 className="text-base font-medium text-gray-900">{level?.parameter || 'Unnamed Parameter'}</h3>
+                              <p className="mt-1 text-sm text-gray-500">Target: {level?.target || 'Not specified'}</p>
+                            </div>
+                          </div>
+                          {level?.penalty && (
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                              Penalty: {level.penalty}
                               </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                          )}
+                        </div>
+                        {level?.measurement && (
+                          <div className="mt-4 bg-gray-50 rounded-lg p-3">
+                            <div className="flex items-center">
+                              <Ruler className="h-4 w-4 text-gray-400 mr-2" />
+                              <p className="text-sm text-gray-600">
+                                <span className="font-medium">Measurement Method:</span> {level.measurement}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <h6 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
-                      <Shield className="mr-2 text-yellow-500" size={16} />
-                      Quality Requirements
-                    </h6>
-                    <p className="text-sm text-gray-600 leading-relaxed">{scopeData?.performance_standards?.quality_requirements || 'No quality requirements specified'}</p>
+
+                  {/* Empty State for Service Levels */}
+                  {(!scopeData?.performance_standards?.service_levels || scopeData.performance_standards.service_levels.length === 0) && (
+                    <div className="text-center py-8 bg-gray-50 rounded-lg">
+                      <Target className="mx-auto h-12 w-12 text-gray-400" />
+                      <h3 className="mt-2 text-sm font-medium text-gray-900">No Service Levels</h3>
+                      <p className="mt-1 text-sm text-gray-500">No service level requirements have been specified.</p>
+                  </div>
+                  )}
+
+                  {/* Quality Requirements */}
+                  <div className="bg-yellow-50 rounded-lg p-6">
+                    <div className="flex items-center mb-4">
+                      <Shield className="h-6 w-6 text-yellow-500 mr-3" />
+                      <h5 className="text-base font-medium text-gray-900">Quality Requirements</h5>
+                    </div>
+                    <div className="prose max-w-none">
+                      <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">
+                        {scopeData?.performance_standards?.quality_requirements || 'No quality requirements specified'}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -3569,11 +3734,30 @@ const TenderSummary = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-gray-50 p-3 rounded">
                 <p className="text-xs text-gray-500">Submission Format</p>
-                <p className="text-sm font-medium">{item.submission_details.submission_format || 'Not specified'}</p>
+                <div className="text-sm font-medium">
+                  {item.submission_details?.submission_format && 
+                   typeof item.submission_details.submission_format === 'object' ? (
+                    <div className="space-y-1">
+                      {item.submission_details.submission_format.format_type && (
+                        <div>Format: {item.submission_details.submission_format.format_type}</div>
+                      )}
+                      {item.submission_details.submission_format.number_of_copies && (
+                        <div>Copies: {item.submission_details.submission_format.number_of_copies}</div>
+                      )}
+                      {item.submission_details.submission_format.special_instructions && (
+                        <div>Instructions: {item.submission_details.submission_format.special_instructions}</div>
+                      )}
+                    </div>
+                  ) : (
+                    <div>{typeof item.submission_details?.submission_format === 'string' ? 
+                          item.submission_details.submission_format : 
+                          'Not specified'}</div>
+                  )}
+                </div>
               </div>
               <div className="bg-gray-50 p-3 rounded">
                 <p className="text-xs text-gray-500">Submission Stage</p>
-                <p className="text-sm font-medium">{item.submission_details.submission_stage || 'Not specified'}</p>
+                <p className="text-sm font-medium">{item.submission_details?.submission_stage || 'Not specified'}</p>
               </div>
               {item.evaluation_impact.evaluation_weightage !== null && (
                 <div className="bg-gray-50 p-3 rounded">
@@ -3584,7 +3768,7 @@ const TenderSummary = () => {
             </div>
 
             {/* Special Instructions */}
-            {item.submission_details.special_instructions && (
+            {item.submission_details?.special_instructions && (
               <div className="bg-yellow-50 border border-yellow-100 p-3 rounded">
                 <p className="text-sm text-yellow-800">
                   <span className="font-medium">Special Instructions: </span>
@@ -3820,7 +4004,7 @@ const TenderSummary = () => {
                               {doc.document_details.stage_required}
                             </span>
                           )}
-                          {doc.document_details.submission_format.format_type && (
+                          {doc.document_details.submission_format?.format_type && (
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                               {doc.document_details.submission_format.format_type}
                             </span>
@@ -3842,10 +4026,10 @@ const TenderSummary = () => {
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500">
                         <div className="space-y-1">
-                          {doc.applicability.applicable_to && (
+                          {doc.applicability?.applicable_to && (
                             <div>For: {doc.applicability.applicable_to}</div>
                           )}
-                          {doc.applicability.exemptions && (
+                          {doc.applicability?.exemptions && (
                             <div className="text-amber-600">
                               Exemptions: {doc.applicability.exemptions}
                             </div>
@@ -4101,13 +4285,293 @@ const TenderSummary = () => {
 
   // Add renderEvaluationCriteria function
   const renderEvaluationCriteria = () => {
-    if (evaluationQuery.isLoading) return <div>Loading...</div>;
+    if (evaluationQuery.isLoading) {
+      return (
+        <div className="space-y-4">
+          <div className="h-6 bg-gray-200 rounded w-1/4 animate-pulse"></div>
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="p-4 rounded-lg border border-gray-200">
+                <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse mb-2"></div>
+                <div className="h-3 bg-gray-200 rounded w-1/2 animate-pulse"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    
     if (evaluationQuery.isError) return <div>Error loading evaluation criteria</div>;
+    
+    const evaluationData = evaluationQuery.data?.processed_section as EvaluationData;
+    if (!evaluationData) return <div>No evaluation criteria available</div>;
     
     return (
       <div className="space-y-6">
-        <h3 className="text-lg font-medium text-gray-900">Evaluation Criteria</h3>
-        {renderContentSection(evaluationQuery.data)}
+        {/* Evaluation Type Section */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Evaluation Methodology</h3>
+          <div className="space-y-4">
+            <div className="flex items-center">
+              <span className="text-sm font-medium text-gray-500 w-32">Type:</span>
+              <span className="text-sm text-gray-900">{evaluationData.evaluation_type?.type}</span>
+            </div>
+            <div className="flex items-start">
+              <span className="text-sm font-medium text-gray-500 w-32">Description:</span>
+              <span className="text-sm text-gray-900">{evaluationData.evaluation_type?.description}</span>
+            </div>
+            {evaluationData.evaluation_type?.justification && (
+              <div className="flex items-start">
+                <span className="text-sm font-medium text-gray-500 w-32">Justification:</span>
+                <span className="text-sm text-gray-900">{evaluationData.evaluation_type?.justification}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Evaluation Stages */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Evaluation Stages</h3>
+          <div className="space-y-4">
+            {evaluationData.stages?.map((stage: EvaluationStage, index: number) => (
+              <div key={index} className="flex items-start space-x-4 p-4 rounded-lg bg-gray-50">
+                <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                  <span className="text-sm font-medium text-blue-600">{stage.sequence_number}</span>
+                </div>
+                <div className="flex-grow">
+                  <h4 className="text-sm font-medium text-gray-900">{stage.stage_name}</h4>
+                  <div className="mt-1 flex items-center space-x-2">
+                    <span className="text-xs text-gray-500">{stage.stage_type}</span>
+                    {stage.is_eliminatory && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                        Eliminatory
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-2 text-sm text-gray-600">{stage.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Technical Evaluation */}
+        {evaluationData.technical_evaluation && (
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Technical Evaluation</h3>
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-gray-50 p-4 rounded">
+                  <p className="text-sm font-medium text-gray-500">Weightage</p>
+                  <p className="mt-1 text-lg font-semibold text-gray-900">{evaluationData.technical_evaluation.weightage}</p>
+                </div>
+                <div className="bg-gray-50 p-4 rounded">
+                  <p className="text-sm font-medium text-gray-500">Minimum Qualifying Score</p>
+                  <p className="mt-1 text-lg font-semibold text-gray-900">{evaluationData.technical_evaluation.minimum_qualifying_score}</p>
+                </div>
+              </div>
+
+              {/* Scoring Matrix */}
+              <div className="mt-6">
+                <h4 className="text-md font-medium text-gray-900 mb-4">Scoring Matrix</h4>
+                {evaluationData.technical_evaluation.scoring_matrix?.map((category: ScoringMatrixCategory, index: number) => (
+                  <div key={index} className="mb-6">
+                    <div className="flex items-center justify-between mb-2">
+                      <h5 className="text-sm font-medium text-gray-900">{category.criteria_category}</h5>
+                      <span className="text-sm font-medium text-blue-600">Weightage: {category.category_weightage}%</span>
+                    </div>
+                    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Parameter</th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Max Marks</th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Scoring Method</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {category.parameters?.map((param: TechnicalParameter, pIndex: number) => (
+                            <tr key={pIndex} className="hover:bg-gray-50">
+                              <td className="px-6 py-4 text-sm text-gray-900">{param.parameter_name}</td>
+                              <td className="px-6 py-4 text-sm text-gray-500">{param.max_marks || '-'}</td>
+                              <td className="px-6 py-4 text-sm text-gray-500">{param.scoring_method || '-'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Financial Evaluation */}
+        {evaluationData.financial_evaluation && (
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Financial Evaluation</h3>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-gray-50 p-4 rounded">
+                  <p className="text-sm font-medium text-gray-500">Weightage</p>
+                  <p className="mt-1 text-lg font-semibold text-gray-900">{evaluationData.financial_evaluation.weightage}</p>
+                </div>
+              </div>
+              {evaluationData.financial_evaluation.scoring_formula && (
+                <div className="bg-blue-50 p-4 rounded">
+                  <p className="text-sm font-medium text-blue-900">Scoring Formula</p>
+                  <p className="mt-1 text-sm text-blue-800">{evaluationData.financial_evaluation.scoring_formula}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Composite Scoring */}
+        {evaluationData.composite_scoring && (
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Composite Scoring</h3>
+            <div className="space-y-4">
+              <div className="bg-gray-50 p-4 rounded">
+                <p className="text-sm font-medium text-gray-900">Formula</p>
+                <p className="mt-1 text-sm text-gray-600">{evaluationData.composite_scoring.formula}</p>
+              </div>
+              {evaluationData.composite_scoring.example_calculation && (
+                <div className="bg-yellow-50 p-4 rounded">
+                  <p className="text-sm font-medium text-yellow-900">Example Calculation</p>
+                  <p className="mt-1 text-sm text-yellow-800 whitespace-pre-line">{evaluationData.composite_scoring.example_calculation}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Selection Method */}
+        {evaluationData.selection_method && (
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Selection Method</h3>
+            <div className="space-y-4">
+              <div className="bg-gray-50 p-4 rounded">
+                <p className="text-sm font-medium text-gray-900">Primary Criteria</p>
+                <p className="mt-1 text-sm text-gray-600">{evaluationData.selection_method.primary_criteria}</p>
+              </div>
+              {evaluationData.selection_method.tie_breaker && (
+                <div className="bg-gray-50 p-4 rounded">
+                  <p className="text-sm font-medium text-gray-900">Tie Breaker</p>
+                  <p className="mt-1 text-sm text-gray-600">{evaluationData.selection_method.tie_breaker}</p>
+                </div>
+              )}
+              {evaluationData.selection_method.negotiation_terms && (
+                <div className="bg-gray-50 p-4 rounded">
+                  <p className="text-sm font-medium text-gray-900">Negotiation Terms</p>
+                  <p className="mt-1 text-sm text-gray-600">{evaluationData.selection_method.negotiation_terms}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Specific Requirements */}
+        {evaluationData.specific_requirements && (
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Specific Requirements</h3>
+            <div className="space-y-4">
+              {evaluationData.specific_requirements.qcbs_specific && (
+                <div className="bg-blue-50 p-4 rounded">
+                  <h4 className="text-base font-medium text-blue-900 mb-3">QCBS Specific Requirements</h4>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-sm font-medium text-blue-900">Technical Weightage</p>
+                      <p className="mt-1 text-sm text-blue-800">{evaluationData.specific_requirements.qcbs_specific.technical_weightage}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-blue-900">Financial Weightage</p>
+                      <p className="mt-1 text-sm text-blue-800">{evaluationData.specific_requirements.qcbs_specific.financial_weightage}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-blue-900">Scoring Formula</p>
+                      <p className="mt-1 text-sm text-blue-800 whitespace-pre-line">{evaluationData.specific_requirements.qcbs_specific.scoring_formula}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {evaluationData.specific_requirements.L1_specific && (
+                <div className="bg-gray-50 p-4 rounded">
+                  <h4 className="text-base font-medium text-gray-900 mb-2">L1 Specific Requirements</h4>
+                  <p className="text-sm text-gray-600">{evaluationData.specific_requirements.L1_specific.price_preference}</p>
+                  <p className="text-sm text-gray-600">{evaluationData.specific_requirements.L1_specific.purchase_preference}</p>
+                  <p className="text-sm text-gray-600">{evaluationData.specific_requirements.L1_specific.msme_benefits}</p>
+                </div>
+              )}
+              {evaluationData.specific_requirements.qbs_specific && (
+                <div className="bg-gray-50 p-4 rounded">
+                  <h4 className="text-base font-medium text-gray-900 mb-2">QBS Specific Requirements</h4>
+                  <p className="text-sm text-gray-600">{evaluationData.specific_requirements.qbs_specific.negotiation_process}</p>
+                  <p className="text-sm text-gray-600">{evaluationData.specific_requirements.qbs_specific.fallback_options}</p>
+                </div>
+              )}
+              {evaluationData.specific_requirements.fbs_specific && (
+                <div className="bg-gray-50 p-4 rounded">
+                  <h4 className="text-base font-medium text-gray-900 mb-2">FBS Specific Requirements</h4>
+                  <p className="text-sm text-gray-600">{evaluationData.specific_requirements.fbs_specific.budget_ceiling}</p>
+                  <p className="text-sm text-gray-600">{evaluationData.specific_requirements.fbs_specific.compliance_requirements}</p>
+                </div>
+              )}
+              {evaluationData.specific_requirements.lcs_specific && (
+                <div className="bg-gray-50 p-4 rounded">
+                  <h4 className="text-base font-medium text-gray-900 mb-2">LCS Specific Requirements</h4>
+                  <p className="text-sm text-gray-600">{evaluationData.specific_requirements.lcs_specific.technical_threshold}</p>
+                  <p className="text-sm text-gray-600">{evaluationData.specific_requirements.lcs_specific.cost_evaluation_method}</p>
+                </div>
+              )}
+              {evaluationData.specific_requirements.sss_specific && (
+                <div className="bg-gray-50 p-4 rounded">
+                  <h4 className="text-base font-medium text-gray-900 mb-2">SSS Specific Requirements</h4>
+                  <p className="text-sm text-gray-600">{evaluationData.specific_requirements.sss_specific.justification}</p>
+                  <p className="text-sm text-gray-600">{evaluationData.specific_requirements.sss_specific.approval_requirements}</p>
+                </div>
+              )}
+              {evaluationData.specific_requirements.era_specific && (
+                <div className="bg-gray-50 p-4 rounded">
+                  <h4 className="text-base font-medium text-gray-900 mb-2">ERA Specific Requirements</h4>
+                  <p className="text-sm text-gray-600">{evaluationData.specific_requirements.era_specific.auction_rules}</p>
+                  <p className="text-sm text-gray-600">{evaluationData.specific_requirements.era_specific.decrement_value}</p>
+                  <p className="text-sm text-gray-600">{evaluationData.specific_requirements.era_specific.duration}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Disqualification Criteria */}
+        {evaluationData.disqualification_criteria && evaluationData.disqualification_criteria.length > 0 && (
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Disqualification Criteria</h3>
+            <div className="space-y-3">
+              {evaluationData.disqualification_criteria.map((criteria: DisqualificationCriteria, index: number) => (
+                <div key={index} className="flex items-start space-x-3 p-3 bg-red-50 rounded">
+                  <div className="flex-shrink-0">
+                    <AlertTriangle className="h-5 w-5 text-red-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-red-900">{criteria.criteria}</p>
+                    {criteria.stage && (
+                      <p className="mt-1 text-xs text-red-700">
+                        Stage: {criteria.stage}
+                      </p>
+                    )}
+                    {criteria.verification_method && (
+                      <p className="mt-1 text-xs text-red-700">
+                        Verification: {criteria.verification_method}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   };
