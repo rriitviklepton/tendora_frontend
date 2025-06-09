@@ -46,11 +46,13 @@ import {
   User,
   Check,
   ListTodo,
-  Ruler
+  Ruler,
+  ThumbsDown
 } from 'lucide-react';
 import StatusBadge from '../../components/UI/StatusBadge';
 import { getTimeRemaining, formatCurrency } from '../../utils/helpers';
 import PDFViewer from '../../components/PDFViewer/PDFViewer';
+import FeedbackForm from '../../components/Feedback/FeedbackForm';
 
 declare global {
   interface Window {
@@ -807,15 +809,15 @@ const ELIGIBILITY_TABS = [
 
 // Add these interfaces at the top of the file with other interfaces
 interface EvaluationStage {
-  stage_name: string;
-  stage_type: string;
-  sequence_number: string | number;
-  description: string;
-  is_eliminatory: boolean;
+  stage_name: string | null;
+  stage_type: string | null;
+  sequence_number: string | number | null;
+  description: string | null;
+  is_eliminatory: boolean | null;
 }
 
 interface TechnicalParameter {
-  parameter_name: string;
+  parameter_name: string | null;
   max_marks: string | number | null;
   scoring_method: string | null;
   supporting_documents: string | null;
@@ -823,13 +825,13 @@ interface TechnicalParameter {
 }
 
 interface ScoringMatrixCategory {
-  criteria_category: string;
-  parameters: TechnicalParameter[];
-  category_weightage: string | number;
+  criteria_category: string | null;
+  parameters: TechnicalParameter[] | null;
+  category_weightage: string | number | null;
 }
 
 interface DisqualificationCriteria {
-  criteria: string;
+  criteria: string | null;
   stage: string | null;
   verification_method: string | null;
 }
@@ -991,7 +993,18 @@ const TenderSummary = () => {
   const [expandedTasks, setExpandedTasks] = useState<number[]>([]);
   // Add this near the top with other state declarations
   const [expandedDeliverables, setExpandedDeliverables] = useState<number[]>([]);
+  const [feedbackFormOpen, setFeedbackFormOpen] = useState(false);
+  const [feedbackSection, setFeedbackSection] = useState<string | null>(null);
+  const [feedbackSubsection, setFeedbackSubsection] = useState<string | null>(null);
   
+  const handleCloseFeedback = () => {
+    setFeedbackFormOpen(false);
+    setFeedbackSection(null);
+    setFeedbackSubsection(null);
+  }; // Close and reset feedback form states
+
+  const tenderIdNum = id ? parseInt(id, 10) : undefined; // Convert id to number
+
   // Add useEffect for initial tab selection
   useEffect(() => {
     setActiveTab('table_of_contents');
@@ -1926,7 +1939,7 @@ const TenderSummary = () => {
   };
 
   // Update the renderActiveTabContent function
-  const renderActiveTabContent = () => {
+  function renderActiveTabContent() {
     const sectionState = getSectionState(activeTab, sectionStatus, sectionApiMapping);
 
     if (sectionState === 'analyzing') {
@@ -2001,7 +2014,7 @@ const TenderSummary = () => {
       default:
         return null;
     }
-  };
+  }
 
   // Update the main loading check
   if (isInitialLoading) {
@@ -2310,7 +2323,7 @@ const TenderSummary = () => {
   };
 
   // Update the section render functions
-    const renderScopeOfWork = () => {
+    function renderScopeOfWork() {
     if (scopeQuery.isLoading) {
       return (
         <div className="space-y-4">
@@ -2471,9 +2484,17 @@ const TenderSummary = () => {
           <div className="flex-1 min-h-[600px] bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             {activeScopeTab === 'project_overview' && (
               <div className="space-y-6">
-                <h4 className="text-lg font-semibold text-gray-900 flex items-center">
-                  <Building className="mr-2 text-blue-500" size={20} />
-                  Project Overview
+                <h4 className="text-lg font-semibold text-gray-900 flex items-center justify-between">
+                  <div className="flex items-center">
+                    <Building className="mr-2 text-blue-500" size={20} />
+                    Project Overview
+                  </div>
+                  <button
+                    onClick={() => handleOpenFeedback('Scope of Work', 'Project Overview')}
+                    className="p-1 rounded-full hover:bg-red-100 text-red-500" aria-label="Dislike Project Overview"
+                  >
+                    <ThumbsDown size={16} />
+                  </button>
                 </h4>
                 <div className="space-y-6">
                   <div className="bg-gray-50 rounded-lg p-4 max-w-2xl">
@@ -2498,9 +2519,17 @@ const TenderSummary = () => {
 
             {activeScopeTab === 'detailed_tasks' && (
               <div className="space-y-6">
-                <h4 className="text-lg font-semibold text-gray-900 flex items-center">
-                  <ListTodo className="mr-2 text-green-500" size={20} />
-                  Detailed Tasks
+                <h4 className="text-lg font-semibold text-gray-900 flex items-center justify-between">
+                  <div className="flex items-center">
+                    <ListTodo className="mr-2 text-green-500" size={20} />
+                    Detailed Tasks
+                  </div>
+                  <button
+                    onClick={() => handleOpenFeedback('Scope of Work', 'Tasks & Activities')}
+                    className="p-1 rounded-full hover:bg-red-100 text-red-500" aria-label="Dislike Detailed Tasks"
+                  >
+                    <ThumbsDown size={16} />
+                  </button>
                 </h4>
                 <div className="space-y-4">
                   {(scopeData.detailed_tasks || []).map((task: any, index: number) => (
@@ -2581,9 +2610,17 @@ const TenderSummary = () => {
 
             {activeScopeTab === 'deliverables' && (
               <div className="space-y-6">
-                <h4 className="text-lg font-semibold text-gray-900 flex items-center">
-                  <Package className="mr-2 text-orange-500" size={20} />
-                  Deliverables
+                <h4 className="text-lg font-semibold text-gray-900 flex items-center justify-between">
+                  <div className="flex items-center">
+                    <Package className="mr-2 text-orange-500" size={20} />
+                    Deliverables
+                  </div>
+                  <button
+                    onClick={() => handleOpenFeedback('Scope of Work', 'Deliverables')}
+                    className="p-1 rounded-full hover:bg-red-100 text-red-500" aria-label="Dislike Deliverables"
+                  >
+                    <ThumbsDown size={16} />
+                  </button>
                 </h4>
                 <div className="space-y-4">
                   {(scopeData.deliverables || []).map((deliverable: any, index: number) => (
@@ -2660,9 +2697,17 @@ const TenderSummary = () => {
 
             {activeScopeTab === 'timeline' && (
               <div className="space-y-6">
-                <h4 className="text-lg font-semibold text-gray-900 flex items-center">
-                  <Calendar className="mr-2 text-blue-500" size={20} />
-                  Timeline
+                <h4 className="text-lg font-semibold text-gray-900 flex items-center justify-between">
+                  <div className="flex items-center">
+                    <Calendar className="mr-2 text-blue-500" size={20} />
+                    Timeline
+                  </div>
+                  <button
+                    onClick={() => handleOpenFeedback('Scope of Work', 'Timeline')}
+                    className="p-1 rounded-full hover:bg-red-100 text-red-500" aria-label="Dislike Timeline"
+                  >
+                    <ThumbsDown size={16} />
+                  </button>
                 </h4>
                 <div className="mb-6">
                   <div className="inline-flex items-center px-4 py-2 rounded-full bg-blue-50 text-blue-700">
@@ -2708,9 +2753,17 @@ const TenderSummary = () => {
 
             {activeScopeTab === 'location' && (
               <div className="space-y-6">
-                <h4 className="text-lg font-semibold text-gray-900 flex items-center">
-                  <MapPin className="mr-2 text-indigo-500" size={20} />
-                  Location
+                <h4 className="text-lg font-semibold text-gray-900 flex items-center justify-between">
+                  <div className="flex items-center">
+                    <MapPin className="mr-2 text-indigo-500" size={20} />
+                    Location
+                  </div>
+                  <button
+                    onClick={() => handleOpenFeedback('Scope of Work', 'Location')}
+                    className="p-1 rounded-full hover:bg-red-100 text-red-500" aria-label="Dislike Location"
+                  >
+                    <ThumbsDown size={16} />
+                  </button>
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="bg-gray-50 rounded-lg p-4">
@@ -2750,9 +2803,17 @@ const TenderSummary = () => {
 
             {activeScopeTab === 'resources' && (
               <div className="space-y-6">
-                <h4 className="text-lg font-semibold text-gray-900 flex items-center">
-                  <Users className="mr-2 text-pink-500" size={20} />
-                  Resources
+                <h4 className="text-lg font-semibold text-gray-900 flex items-center justify-between">
+                  <div className="flex items-center">
+                    <Users className="mr-2 text-pink-500" size={20} />
+                    Resources
+                  </div>
+                  <button
+                    onClick={() => handleOpenFeedback('Scope of Work', 'Resources')}
+                    className="p-1 rounded-full hover:bg-red-100 text-red-500" aria-label="Dislike Resources"
+                  >
+                    <ThumbsDown size={16} />
+                  </button>
                 </h4>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div>
@@ -2838,9 +2899,17 @@ const TenderSummary = () => {
 
             {activeScopeTab === 'performance_standards' && (
               <div className="space-y-6">
-                <h4 className="text-lg font-semibold text-gray-900 flex items-center">
-                  <Target className="mr-2 text-yellow-500" size={20} />
-                  Performance Standards
+                <h4 className="text-lg font-semibold text-gray-900 flex items-center justify-between">
+                  <div className="flex items-center">
+                    <Target className="mr-2 text-yellow-500" size={20} />
+                    Performance Standards
+                  </div>
+                  <button
+                    onClick={() => handleOpenFeedback('Scope of Work', 'Performance')}
+                    className="p-1 rounded-full hover:bg-red-100 text-red-500" aria-label="Dislike Performance Standards"
+                  >
+                    <ThumbsDown size={16} />
+                  </button>
                 </h4>
                 <div className="space-y-6">
                   {/* Service Levels */}
@@ -2906,9 +2975,17 @@ const TenderSummary = () => {
 
             {activeScopeTab === 'training' && (
               <div className="space-y-6">
-                <h4 className="text-lg font-semibold text-gray-900 flex items-center">
-                  <GraduationCap className="mr-2 text-emerald-500" size={20} />
-                  Training
+                <h4 className="text-lg font-semibold text-gray-900 flex items-center justify-between">
+                  <div className="flex items-center">
+                    <GraduationCap className="mr-2 text-emerald-500" size={20} />
+                    Training
+                  </div>
+                  <button
+                    onClick={() => handleOpenFeedback('Scope of Work', 'Training')}
+                    className="p-1 rounded-full hover:bg-red-100 text-red-500" aria-label="Dislike Training"
+                  >
+                    <ThumbsDown size={16} />
+                  </button>
                 </h4>
                 <div className="space-y-6">
                   <div className="flex items-center">
@@ -2962,9 +3039,17 @@ const TenderSummary = () => {
 
             {activeScopeTab === 'support' && (
               <div className="space-y-6">
-                <h4 className="text-lg font-semibold text-gray-900 flex items-center">
-                  <LifeBuoy className="mr-2 text-sky-500" size={20} />
-                  Support
+                <h4 className="text-lg font-semibold text-gray-900 flex items-center justify-between">
+                  <div className="flex items-center">
+                    <LifeBuoy className="mr-2 text-sky-500" size={20} />
+                    Support
+                  </div>
+                  <button
+                    onClick={() => handleOpenFeedback('Scope of Work', 'Support')}
+                    className="p-1 rounded-full hover:bg-red-100 text-red-500" aria-label="Dislike Support"
+                  >
+                    <ThumbsDown size={16} />
+                  </button>
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {scopeData.support.warranty_period && (
@@ -2997,7 +3082,7 @@ const TenderSummary = () => {
         </div>
       </div>
     );
-  };
+  }
 
   const renderEligibilityConditions = () => {
     if (eligibilityQuery.isLoading) {
@@ -3062,6 +3147,18 @@ const TenderSummary = () => {
         <div className="mt-6">
           {activeEligibilityTab === 'legal' && eligibilityData.legal_eligibility && (
             <div className="space-y-6 animate-fadeIn">
+              <h4 className="text-lg font-semibold text-gray-900 flex items-center justify-between">
+                <div className="flex items-center">
+                  <Building className="mr-2 text-blue-500" size={20} />
+                  Legal Eligibility
+                </div>
+                <button
+                  onClick={() => handleOpenFeedback('Eligibility', 'Legal')}
+                  className="p-1 rounded-full hover:bg-red-100 text-red-500" aria-label="Dislike Legal Eligibility"
+                >
+                  <ThumbsDown size={16} />
+                </button>
+              </h4>
               {/* Registration Requirements */}
               {eligibilityData.legal_eligibility.registration_requirements?.length > 0 && (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 transition-all duration-200 hover:shadow-md">
@@ -3163,6 +3260,18 @@ const TenderSummary = () => {
 
           {activeEligibilityTab === 'technical' && eligibilityData.technical_eligibility && (
             <div className="space-y-6 animate-fadeIn">
+              <h4 className="text-lg font-semibold text-gray-900 flex items-center justify-between">
+                <div className="flex items-center">
+                  <Settings className="mr-2 text-blue-500" size={20} />
+                  Technical Eligibility
+                </div>
+                <button
+                  onClick={() => handleOpenFeedback('Eligibility', 'Technical')}
+                  className="p-1 rounded-full hover:bg-red-100 text-red-500" aria-label="Dislike Technical Eligibility"
+                >
+                  <ThumbsDown size={16} />
+                </button>
+              </h4>
               {/* Past Experience */}
               {eligibilityData.technical_eligibility.past_experience && (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 transition-all duration-200 hover:shadow-md">
@@ -3376,6 +3485,18 @@ const TenderSummary = () => {
 
           {activeEligibilityTab === 'financial' && eligibilityData.financial_eligibility && (
             <div className="space-y-6 animate-fadeIn">
+              <h4 className="text-lg font-semibold text-gray-900 flex items-center justify-between">
+                <div className="flex items-center">
+                  <DollarSign className="mr-2 text-green-500" size={20} />
+                  Financial Eligibility
+                </div>
+                <button
+                  onClick={() => handleOpenFeedback('Eligibility', 'Financial')}
+                  className="p-1 rounded-full hover:bg-red-100 text-red-500" aria-label="Dislike Financial Eligibility"
+                >
+                  <ThumbsDown size={16} />
+                </button>
+              </h4>
               {/* Turnover Requirements */}
               {eligibilityData.financial_eligibility.turnover_requirements && (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 transition-all duration-200 hover:shadow-md">
@@ -3451,6 +3572,18 @@ const TenderSummary = () => {
 
           {activeEligibilityTab === 'statutory' && eligibilityData.statutory_compliance?.registrations?.length > 0 && (
             <div className="space-y-6 animate-fadeIn">
+              <h4 className="text-lg font-semibold text-gray-900 flex items-center justify-between">
+                <div className="flex items-center">
+                  <FileCheck className="mr-2 text-purple-500" size={20} />
+                  Statutory Compliance
+                </div>
+                <button
+                  onClick={() => handleOpenFeedback('Eligibility', 'Statutory')}
+                  className="p-1 rounded-full hover:bg-red-100 text-red-500" aria-label="Dislike Statutory Compliance"
+                >
+                  <ThumbsDown size={16} />
+                </button>
+              </h4>
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 transition-all duration-200 hover:shadow-md">
                 <div className="p-6">
                   <h5 className="text-base font-semibold text-gray-900 flex items-center mb-4">
@@ -3477,6 +3610,18 @@ const TenderSummary = () => {
 
           {activeEligibilityTab === 'consortium' && eligibilityData.consortium_conditions && (
             <div className="space-y-6 animate-fadeIn">
+              <h4 className="text-lg font-semibold text-gray-900 flex items-center justify-between">
+                <div className="flex items-center">
+                  <Users className="mr-2 text-indigo-500" size={20} />
+                  Consortium Conditions
+                </div>
+                <button
+                  onClick={() => handleOpenFeedback('Eligibility', 'Consortium')}
+                  className="p-1 rounded-full hover:bg-red-100 text-red-500" aria-label="Dislike Consortium Conditions"
+                >
+                  <ThumbsDown size={16} />
+                </button>
+              </h4>
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 transition-all duration-200 hover:shadow-md">
                 <div className="p-6">
                   <div className="flex items-center justify-between mb-6">
@@ -3541,12 +3686,20 @@ const TenderSummary = () => {
 
           {activeEligibilityTab === 'disqualification' && eligibilityData.disqualification_conditions?.length > 0 && (
             <div className="space-y-6 animate-fadeIn">
+              <h4 className="text-lg font-semibold text-gray-900 flex items-center justify-between">
+                <div className="flex items-center">
+                  <AlertTriangle className="mr-2 text-red-500" size={20} />
+                  Disqualification Conditions
+                </div>
+                <button
+                  onClick={() => handleOpenFeedback('Eligibility', 'Disqualification')}
+                  className="p-1 rounded-full hover:bg-red-100 text-red-500" aria-label="Dislike Disqualification Conditions"
+                >
+                  <ThumbsDown size={16} />
+                </button>
+              </h4>
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 transition-all duration-200 hover:shadow-md">
                 <div className="p-6">
-                  <h5 className="text-base font-semibold text-gray-900 flex items-center mb-4">
-                    <AlertTriangle className="mr-2 text-red-500" size={20} />
-                    Disqualification Conditions
-                  </h5>
                   <div className="grid grid-cols-1 gap-3">
                     {eligibilityData.disqualification_conditions.map((condition: string, index: number) => (
                       <div key={index} className="bg-red-50 rounded-lg p-4">
@@ -3568,7 +3721,7 @@ const TenderSummary = () => {
         </div>
       </div>
     );
-  };
+  }
 
   const renderTechnicalEvaluation = () => {
     if (technicalQuery.isLoading) {
@@ -3591,7 +3744,7 @@ const TenderSummary = () => {
         {renderContentSection(technicalQuery.data)}
       </div>
     );
-  };
+  }
 
   const renderFinancialRequirements = () => {
     if (financialQuery.isLoading) {
@@ -3605,7 +3758,7 @@ const TenderSummary = () => {
           </div>
         </div>
       );
-    };
+    }
     if (financialQuery.isError) return <div>Error loading financial requirements</div>;
     
     return (
@@ -3614,7 +3767,7 @@ const TenderSummary = () => {
         {renderContentSection(financialQuery.data)}
       </div>
     );
-  };
+  }
 
   const renderBillOfQuantities = () => {
     if (boqQuery.isLoading) {
@@ -3628,7 +3781,7 @@ const TenderSummary = () => {
           </div>
         </div>
       );
-    };
+    }
     if (boqQuery.isError) return <div>Error loading bill of quantities</div>;
     
     return (
@@ -3637,7 +3790,7 @@ const TenderSummary = () => {
         {renderContentSection(boqQuery.data)}
       </div>
     );
-  };
+  }
 
   const renderContractConditions = () => {
     if (conditionsQuery.isLoading) {
@@ -3651,7 +3804,7 @@ const TenderSummary = () => {
           </div>
         </div>
       );
-    };
+    }
     if (conditionsQuery.isError) return <div>Error loading contract conditions</div>;
     
     return (
@@ -3660,7 +3813,7 @@ const TenderSummary = () => {
         {renderContentSection(conditionsQuery.data)}
       </div>
     );
-  };
+  }
 
   const renderComplianceRequirements = () => {
     if (complianceQuery.isLoading) {
@@ -3678,7 +3831,7 @@ const TenderSummary = () => {
           </div>
         </div>
       );
-    };
+    }
     if (complianceQuery.isError) return <div>Error loading compliance requirements</div>;
     
     const complianceData = complianceQuery.data?.processed_section as ComplianceRequirement[];
@@ -3813,7 +3966,7 @@ const TenderSummary = () => {
         ))}
       </div>
     );
-  };
+  }
 
   const renderImportantDates = () => {
     if (datesQuery.isLoading) {
@@ -3833,7 +3986,7 @@ const TenderSummary = () => {
           </div>
         </div>
       );
-    };
+    }
     if (datesQuery.isError) return <div>Error loading important dates</div>;
     
     const dates = datesQuery.data?.processed_section;
@@ -3901,7 +4054,7 @@ const TenderSummary = () => {
         </div>
       </div>
     );
-  };
+  }
 
   const renderSubmissionRequirements = () => {
     if (annexuresQuery.isLoading) {
@@ -3922,7 +4075,7 @@ const TenderSummary = () => {
           </div>
         </div>
       );
-    };
+    }
     if (annexuresQuery.isError) return <div>Error loading submission requirements</div>;
     if (!annexuresQuery.data?.processed_section) return <div>No submission requirements available</div>;
     
@@ -4169,7 +4322,7 @@ const TenderSummary = () => {
         </div>
       </div>
     );
-  };
+  }
 
   // Add back the renderDocumentRow function
   const renderDocumentRow = (doc: DocumentRow, index: number) => (
@@ -4310,7 +4463,15 @@ const TenderSummary = () => {
       <div className="space-y-6">
         {/* Evaluation Type Section */}
         <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Evaluation Methodology</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center justify-between">
+            Evaluation Methodology
+            <button
+              onClick={() => handleOpenFeedback('Evaluation Criteria', 'Evaluation Methodology')}
+              className="p-1 rounded-full hover:bg-red-100 text-red-500" aria-label="Dislike Evaluation Methodology"
+            >
+              <ThumbsDown size={16} />
+            </button>
+          </h3>
           <div className="space-y-4">
             <div className="flex items-center">
               <span className="text-sm font-medium text-gray-500 w-32">Type:</span>
@@ -4331,7 +4492,15 @@ const TenderSummary = () => {
 
         {/* Evaluation Stages */}
         <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Evaluation Stages</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center justify-between">
+            Evaluation Stages
+            <button
+              onClick={() => handleOpenFeedback('Evaluation Criteria', 'Evaluation Stages')}
+              className="p-1 rounded-full hover:bg-red-100 text-red-500" aria-label="Dislike Evaluation Stages"
+            >
+              <ThumbsDown size={16} />
+            </button>
+          </h3>
           <div className="space-y-4">
             {evaluationData.stages?.map((stage: EvaluationStage, index: number) => (
               <div key={index} className="flex items-start space-x-4 p-4 rounded-lg bg-gray-50">
@@ -4358,7 +4527,15 @@ const TenderSummary = () => {
         {/* Technical Evaluation */}
         {evaluationData.technical_evaluation && (
           <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Technical Evaluation</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center justify-between">
+              Technical Evaluation
+              <button
+                onClick={() => handleOpenFeedback('Evaluation Criteria', 'Technical Evaluation')}
+                className="p-1 rounded-full hover:bg-red-100 text-red-500" aria-label="Dislike Technical Evaluation"
+              >
+                <ThumbsDown size={16} />
+              </button>
+            </h3>
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-gray-50 p-4 rounded">
@@ -4378,7 +4555,7 @@ const TenderSummary = () => {
                   <div key={index} className="mb-6">
                     <div className="flex items-center justify-between mb-2">
                       <h5 className="text-sm font-medium text-gray-900">{category.criteria_category}</h5>
-                      <span className="text-sm font-medium text-blue-600">Weightage: {category.category_weightage}%</span>
+                      <span className="text-sm font-medium text-blue-600">Weightage: {category.category_weightage ?? 'N/A'}%</span>
                     </div>
                     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
                       <table className="min-w-full divide-y divide-gray-200">
@@ -4410,7 +4587,15 @@ const TenderSummary = () => {
         {/* Financial Evaluation */}
         {evaluationData.financial_evaluation && (
           <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Financial Evaluation</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center justify-between">
+              Financial Evaluation
+              <button
+                onClick={() => handleOpenFeedback('Evaluation Criteria', 'Financial Evaluation')}
+                className="p-1 rounded-full hover:bg-red-100 text-red-500" aria-label="Dislike Financial Evaluation"
+              >
+                <ThumbsDown size={16} />
+              </button>
+            </h3>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-gray-50 p-4 rounded">
@@ -4431,7 +4616,15 @@ const TenderSummary = () => {
         {/* Composite Scoring */}
         {evaluationData.composite_scoring && (
           <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Composite Scoring</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center justify-between">
+              Composite Scoring
+              <button
+                onClick={() => handleOpenFeedback('Evaluation Criteria', 'Composite Scoring')}
+                className="p-1 rounded-full hover:bg-red-100 text-red-500" aria-label="Dislike Composite Scoring"
+              >
+                <ThumbsDown size={16} />
+              </button>
+            </h3>
             <div className="space-y-4">
               <div className="bg-gray-50 p-4 rounded">
                 <p className="text-sm font-medium text-gray-900">Formula</p>
@@ -4450,7 +4643,15 @@ const TenderSummary = () => {
         {/* Selection Method */}
         {evaluationData.selection_method && (
           <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Selection Method</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center justify-between">
+              Selection Method
+              <button
+                onClick={() => handleOpenFeedback('Evaluation Criteria', 'Selection Method')}
+                className="p-1 rounded-full hover:bg-red-100 text-red-500" aria-label="Dislike Selection Method"
+              >
+                <ThumbsDown size={16} />
+              </button>
+            </h3>
             <div className="space-y-4">
               <div className="bg-gray-50 p-4 rounded">
                 <p className="text-sm font-medium text-gray-900">Primary Criteria</p>
@@ -4475,7 +4676,15 @@ const TenderSummary = () => {
         {/* Specific Requirements */}
         {evaluationData.specific_requirements && (
           <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Specific Requirements</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center justify-between">
+              Specific Requirements
+              <button
+                onClick={() => handleOpenFeedback('Evaluation Criteria', 'Specific Requirements')}
+                className="p-1 rounded-full hover:bg-red-100 text-red-500" aria-label="Dislike Specific Requirements"
+              >
+                <ThumbsDown size={16} />
+              </button>
+            </h3>
             <div className="space-y-4">
               {evaluationData.specific_requirements.qcbs_specific && (
                 <div className="bg-blue-50 p-4 rounded">
@@ -4547,7 +4756,15 @@ const TenderSummary = () => {
         {/* Disqualification Criteria */}
         {evaluationData.disqualification_criteria && evaluationData.disqualification_criteria.length > 0 && (
           <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Disqualification Criteria</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center justify-between">
+              Disqualification Criteria
+              <button
+                onClick={() => handleOpenFeedback('Evaluation Criteria', 'Disqualification Criteria')}
+                className="p-1 rounded-full hover:bg-red-100 text-red-500" aria-label="Dislike Disqualification Criteria"
+              >
+                <ThumbsDown size={16} />
+              </button>
+            </h3>
             <div className="space-y-3">
               {evaluationData.disqualification_criteria.map((criteria: DisqualificationCriteria, index: number) => (
                 <div key={index} className="flex items-start space-x-3 p-3 bg-red-50 rounded">
@@ -4574,7 +4791,7 @@ const TenderSummary = () => {
         )}
       </div>
     );
-  };
+  }
 
   // Update the tab click handler
   const handleTabClick = (tabId: string) => {
@@ -4739,7 +4956,7 @@ const TenderSummary = () => {
         </div>
       </div>
     );
-  };
+  }
 
   // Update the right side buttons in the header section
   const renderHeaderButtons = () => (
@@ -4759,9 +4976,18 @@ const TenderSummary = () => {
     </div>
   );
 
+  // Add this function to open feedback form for a section
+  const handleOpenFeedback = (sectionName: string, subsectionName: string | null = null) => {
+    console.log('Opening feedback form for section:', sectionName, 'subsection:', subsectionName);
+    console.log('tenderSummaryQuery.data:', tenderSummaryQuery.data);
+    setFeedbackSection(sectionName);
+    setFeedbackSubsection(subsectionName);
+    setFeedbackFormOpen(true);
+  };
+
   // Update the content area section to remove the PDF viewer condition
   return (
-    <div className="w-full px-4 py-8">
+    <div className="w-full">
       <div className="mb-6">
       
         
@@ -4901,10 +5127,11 @@ const TenderSummary = () => {
                   {TABS.map(tab => {
                     const isActive = activeTab === tab.id;
                     const { status, hasData } = getSectionStatus(tab.id);
-                    const showReanalyzeButton = tab.id !== 'tender_summary' && tab.id !== 'submission';
+                    const showReanalyzeButton = tab.id !== 'tender_summary' && tab.id !== 'submission' && tab.id !== 'evaluation' && tab.id !== 'table_of_contents' && tab.id !== 'conditions' && tab.id !== 'dates' && tab.id !== 'boq' && tab.id !== 'technical' && tab.id !== 'eligibility' && tab.id !== 'scope' && tab.id !== 'financial' && tab.id !== 'compliance';
                     
                     return (
-                      <div key={tab.id} className="mb-2">
+                      <div key={tab.id} className="mb-2 flex items-center">
+                        {/* Dislike button for completed sections - moved inside the main button for correct positioning */}
                         <button
                           onClick={() => setActiveTab(tab.id)}
                           className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
@@ -4917,15 +5144,36 @@ const TenderSummary = () => {
                           <tab.icon size={18} className={`${isNavCollapsed ? '' : 'mr-2'} ${isActive ? 'text-blue-700' : 'text-gray-400'}`} />
                           {!isNavCollapsed && <span>{tab.name}</span>}
                           
-                          {/* Status indicators */}
-                          {!isNavCollapsed && status === 'failed' && (
-                            <AlertTriangle size={16} className="ml-auto text-amber-500" />
-                          )}
-                          {!isNavCollapsed && status === 'success' && hasData && (
-                            <CheckCircle size={16} className="ml-auto text-green-500" />
+                          {/* Container for dislike button and status indicators */}
+                          {!isNavCollapsed && (
+                            <div className="ml-auto flex items-center">
+                              {status === 'success' && hasData && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation(); // Prevent tab change on dislike click
+                                    handleOpenFeedback(tab.name);
+                                  }}
+                                  className="p-1 rounded-full hover:bg-red-100 text-red-500"
+                                  title={`Give feedback for ${tab.name}`}
+                                >
+                                  <ThumbsDown size={16} />
+                                </button>
+                              )}
+
+                              {/* Status indicators */}
+                              {status === 'failed' && (
+                                <div className="p-1">
+                                  <AlertTriangle size={16} className="text-amber-500" />
+                                </div>
+                              )}
+                              {status === 'success' && hasData && (
+                                <div className="p-1">
+                                  <CheckCircle size={16} className="text-green-500" />
+                                </div>
+                              )}
+                            </div>
                           )}
                         </button>
-
                         {/* Reanalyze button - only show when nav is expanded */}
                         {!isNavCollapsed && showReanalyzeButton && (
                           <button
@@ -4994,6 +5242,17 @@ const TenderSummary = () => {
           selectedIndex={modalOpen}
         />
       )}
+
+      {/* FeedbackForm modal for section feedback */}
+      <FeedbackForm
+        isOpen={feedbackFormOpen}
+        onClose={handleCloseFeedback}
+        tenderName={tenderSummaryQuery.data?.processed_section?.tenderSummary?.title || originalTenderName || 'N/A'}
+        tenderId={id ? parseInt(id) : 0} // Revert to using tenderIdNum from useParams
+        sectionOptions={TABS.map(tab => ({ id: tab.id, name: tab.name }))}
+        showTenderFields={true}
+        preselectedSection={feedbackSection || undefined}
+      />
     </div>
   );
 };

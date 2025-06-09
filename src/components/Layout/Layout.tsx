@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import AIAssistant from '../AIAssistant/AIAssistant';
+import FeedbackButton from '../Feedback/FeedbackButton';
 
 const Layout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const location = useLocation();
+  const isTenderRoute = /^\/tender\//.test(location.pathname);
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -20,13 +23,16 @@ const Layout = () => {
           toggleAssistant={() => setAssistantOpen(!assistantOpen)}
         />
         
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">
+        <main className="flex-1 overflow-y-auto ">
           <Outlet />
         </main>
       </div>
 
       {/* AI Assistant Sidebar */}
       <AIAssistant open={assistantOpen} setOpen={setAssistantOpen} />
+
+      {/* Feedback Button */}
+      {isTenderRoute && <FeedbackButton />}
     </div>
   );
 };
