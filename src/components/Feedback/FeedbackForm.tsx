@@ -99,23 +99,26 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ isOpen, onClose, tenderName
 
   // Update selectedSection and selectedSubsection when preselectedSection changes
   useEffect(() => {
-    console.log('preselectedSection changed to:', preselectedSection);
     setSelectedSection(preselectedSection || '');
 
+    // If a preselected section is provided and it exists in our mapping
     if (preselectedSection && SECTION_SUBSECTIONS[preselectedSection]) {
+      // Check if a preselected subsection is provided and is valid for the current section
       if (preselectedSubsection && SECTION_SUBSECTIONS[preselectedSection].includes(preselectedSubsection)) {
         setSelectedSubsection(preselectedSubsection);
       } else if (SECTION_SUBSECTIONS[preselectedSection][0] !== 'None') {
+        // If no valid preselected subsection, default to 'Overall' if available
         setSelectedSubsection('Overall');
       } else {
+        // If the section has no subsections other than 'None', set to empty
         setSelectedSubsection('');
       }
     } else {
+      // If no preselected section, or section is invalid, reset both
+      setSelectedSection('');
       setSelectedSubsection('');
     }
-    console.log('State: selectedSection (after effect)', selectedSection);
-    console.log('State: selectedSubsection (after effect)', selectedSubsection);
-  }, [preselectedSection, preselectedSubsection]); // Added preselectedSubsection to dependencies
+  }, [preselectedSection, preselectedSubsection]);
 
   const handleReasonToggle = (reason: string) => {
     setSelectedReasons((prev) =>

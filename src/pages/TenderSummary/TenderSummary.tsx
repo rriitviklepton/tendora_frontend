@@ -5252,6 +5252,7 @@ const TenderSummary = () => {
         sectionOptions={TABS.map(tab => ({ id: tab.id, name: tab.name }))}
         showTenderFields={true}
         preselectedSection={feedbackSection || undefined}
+        preselectedSubsection={feedbackSubsection || undefined}
       />
     </div>
   );
