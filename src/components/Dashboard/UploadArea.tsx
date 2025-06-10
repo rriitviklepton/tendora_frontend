@@ -283,10 +283,10 @@ const UploadArea = () => {
   return (
     <div 
       className={`
-        w-full px-6 py-10 border-2 border-dashed rounded-lg text-center
+        w-full px-6 py-10 border-2 border-dashed rounded-lg text-center bg-blue-50
         ${isDragging 
-          ? 'border-blue-500 bg-blue-50' 
-          : 'border-gray-300 bg-gray-50 hover:bg-gray-100'
+          ? 'border-blue-400 bg-gradient-to-r from-blue-100 to-indigo-200' 
+          : 'border-gray-200 hover:border-blue-300'
         }
         transition-colors duration-200
       `}
@@ -297,18 +297,18 @@ const UploadArea = () => {
       {isUploading ? (
         <div className="flex flex-col items-center">
           <Loader size={40} className="text-blue-500 animate-spin mb-3" />
-          <p className="text-sm text-gray-600 mb-1">
+          <p className="text-sm text-gray-700 mb-1">
             Uploading tender document...
           </p>
-          <div className="w-48 h-2 bg-gray-200 rounded-full overflow-hidden">
-            <div className="h-full bg-blue-500 animate-pulse"></div>
+          <div className="w-48 h-2 bg-blue-100 rounded-full overflow-hidden">
+            <div className="h-full bg-blue-400 animate-pulse"></div>
           </div>
         </div>
       ) : isAnalyzing ? (
         sectionStatus ? (
           <div className="flex flex-col items-center w-full max-w-2xl mx-auto">
             <Loader size={40} className="text-blue-500 animate-spin mb-3" />
-            <p className="text-sm text-gray-600 mb-2">
+            <p className="text-sm text-gray-700 mb-2">
               Analyzing tender document... ({sectionStatus.progress.completion_percentage.toFixed(1)}% complete)
             </p>
             {sectionStatus.sections['tender_summary']?.status === 'success' && (
@@ -316,7 +316,7 @@ const UploadArea = () => {
                 onClick={() => navigate(`/tender/${sectionStatus.tender_id}`, {
                   state: { org_name: orgName.trim() }
                 })}
-                className="mx-4 px-4 py-2 mb-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
+                className="mx-4 px-4 py-2 mb-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors flex items-center gap-2"
               >
                 <span>View Tender</span>
                 <ArrowRight size={16} />
@@ -327,7 +327,7 @@ const UploadArea = () => {
               {Object.entries(sectionStatus.sections)
                 .sort((a, b) => a[1].order - b[1].order)
                 .map(([key, section]) => (
-                  <div key={key} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                  <div key={key} className="flex items-center justify-between p-2 bg-white rounded-lg shadow-sm">
                     <span className="text-sm text-gray-700">{section.name}</span>
                     <div className="flex items-center">
                       {section.status === 'analyzing' && (
@@ -340,32 +340,29 @@ const UploadArea = () => {
                         <XCircle size={16} className="text-red-500" />
                       )}
                       {section.status === null && (
-                        <div className="w-4 h-4 rounded-full bg-gray-200" />
+                        <div className="w-4 h-4 rounded-full bg-gray-300" />
                       )}
                     </div>
                   </div>
                 ))}
             </div>
             
-            <div className="w-full mt-4 bg-gray-200 rounded-full h-2 overflow-hidden">
+            <div className="w-full mt-4 bg-blue-100 rounded-full h-2 overflow-hidden">
               <div 
                 className="h-full bg-blue-500 transition-all duration-500"
                 style={{ width: `${sectionStatus.progress.completion_percentage}%` }}
               />
             </div>
             
-            <p className="text-xs text-gray-500 mt-2">
+            <p className="text-xs text-gray-600 mt-2">
               {sectionStatus.progress.completed} of {sectionStatus.progress.total} sections completed
               {sectionStatus.progress.failed > 0 && ` (${sectionStatus.progress.failed} failed)`}
             </p>
-
-            {/* Add View Tender button when tender_summary is successful */}
-            
           </div>
         ) : (
           <div className="flex flex-col items-center">
             <Loader size={40} className="text-blue-500 animate-spin mb-3" />
-            <p className="text-sm text-gray-600 mb-1">
+            <p className="text-sm text-gray-700 mb-1">
               Starting analysis...
             </p>
             <p className="text-xs text-gray-500 mt-2">This may take a few minutes</p>
@@ -376,7 +373,7 @@ const UploadArea = () => {
           {uploadStatus.status === 'success' ? (
             <>
               <CheckCircle size={40} className="text-green-500 mb-3" />
-              <p className="text-sm text-gray-600 mb-4">{uploadStatus.message}</p>
+              <p className="text-sm text-gray-700 mb-4">{uploadStatus.message}</p>
             </>
           ) : (
             <>
@@ -384,7 +381,7 @@ const UploadArea = () => {
               <p className="text-sm text-red-600 mb-4">{uploadStatus.message}</p>
               <button
                 onClick={() => setUploadStatus(null)}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-sm transition-colors"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-sm transition-colors"
               >
                 Try Again
               </button>
@@ -412,7 +409,7 @@ const UploadArea = () => {
                 value={orgName}
                 onChange={(e) => setOrgName(e.target.value)}
                 placeholder="Enter Organization Name"
-                className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-400 focus:border-transparent bg-white text-gray-800"
               />
             </div>
           </div>
@@ -423,7 +420,7 @@ const UploadArea = () => {
                 type="checkbox"
                 checked={ocrRequired}
                 onChange={(e) => setOcrRequired(e.target.checked)}
-                className="form-checkbox h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                className="form-checkbox h-4 w-4 text-blue-500 rounded border-gray-300 focus:ring-blue-500 bg-white"
               />
               <div className="flex items-center text-sm text-gray-700">
                 <Scan size={16} className="mr-1" />
@@ -435,7 +432,7 @@ const UploadArea = () => {
             Drag and drop your tender file, or click to select
           </p>
           <div className="flex justify-center gap-2 mb-4">
-            <div className="flex items-center px-3 py-1 rounded-full bg-gray-200 text-xs text-gray-700">
+            <div className="flex items-center px-3 py-1 rounded-full bg-blue-100 text-xs text-blue-700">
               <FileType size={14} className="mr-1" />
               PDF only
             </div>
@@ -447,7 +444,7 @@ const UploadArea = () => {
               accept=".pdf"
               onChange={handleFileInputChange}
             />
-            <span className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-sm transition-colors">
+            <span className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-sm transition-colors">
               Select File
             </span>
           </label>

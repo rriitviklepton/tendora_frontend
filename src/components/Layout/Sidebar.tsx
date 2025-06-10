@@ -32,21 +32,21 @@ const Sidebar = ({ open, setOpen }: SidebarProps) => {
 
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-blue-700 transform transition-transform duration-300 ease-in-out ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-blue-800 to-indigo-900 transform transition-transform duration-300 ease-in-out ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Header and close button */}
-        <div className="flex items-center justify-between h-16 rounded-lg px-4 bg-white">
-          <div className="flex items-center">
-            <img src="/assets/images/logo.png" alt="SmartTender Logo" className="h-8" />
+        <div className="flex items-center justify-between h-16  px-4 border-b border-white">
+          <div className="flex items-center ">
+           <h1 className="text-white font-bold text-2xl">Smart Tender</h1>
           </div>
           <button
             type="button"
             className="text-blue-800 hover:text-blue-600 focus:outline-none"
             onClick={() => setOpen(false)}
           >
-            <X size={24} />
+            <X  className="text-white"size={24} />
           </button>
         </div>
         
@@ -72,7 +72,7 @@ const Sidebar = ({ open, setOpen }: SidebarProps) => {
         </nav>
         
         {/* Status info */}
-        <div className="absolute bottom-0 w-full px-4 py-3 bg-blue-800">
+        <div className="absolute bottom-0 w-full px-4 py-3 bg-blue-800 border-t border-white">
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <div className="w-2 h-2 rounded-full bg-green-400"></div>
