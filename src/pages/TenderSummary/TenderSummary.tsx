@@ -1694,7 +1694,7 @@ const TenderSummary = () => {
         href={absoluteUrl} 
         target="_blank" 
         rel="noopener noreferrer"
-        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors"
+        className="inline-flex items-center px-6 py-2 border border-transparent text-base font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 shadow-sm transition-colors transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
       >
         <Globe size={16} className="mr-1" />
         Portal Link
@@ -5016,17 +5016,7 @@ const TenderSummary = () => {
           View PDF
         </button>
       )}
-      {tenderSummaryData.portalLink && (
-        <a
-          href={tenderSummaryData.portalLink}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center px-6 py-2 border border-transparent text-base font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 shadow-sm transition-colors transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-        >
-          <Link size={20} className="mr-2" />
-          Portal Link
-        </a>
-      )}
+      {renderPortalLink(tenderSummaryData.portalLink)}
     </div>
   );
 
