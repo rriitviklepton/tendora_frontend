@@ -4135,13 +4135,20 @@ const TenderSummary = () => {
                         )}
                         {/* Add page number with clickable link */}
                         {doc.document_details.page_number && (
-                          <button
-                            onClick={() => handlePageClick(doc.document_details.page_number)}
-                            className="mt-1 inline-flex items-center text-sm text-blue-600 hover:text-blue-800 cursor-pointer"
-                          >
-                            <Link size={14} className="mr-1" />
-                            <span>Page {doc.document_details.page_number}</span>
-                          </button>
+                          <div className="mt-2">
+                            <div className="flex flex-wrap gap-1">
+                              {doc.document_details.page_number.split(',').map((page: string, index: number) => (
+                                <button
+                                  key={index}
+                                  onClick={() => handlePageClick(page.replace('Page ', '').trim())}
+                                  className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded"
+                                >
+                                  <Link size={14} className="mr-1" />
+                                  <span>{page.trim()}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
                         )}
                         {doc.document_details.description && (
                           <div className="text-sm text-gray-600 mt-1">{doc.document_details.description}</div>
@@ -4811,6 +4818,50 @@ const TenderSummary = () => {
       setCurrentPdfPage(page);
       setIsPdfModalOpen(true);
     }
+  };
+
+  const handleMultiplePagesClick = (pageNumbersString: string | undefined) => {
+    if (!pageNumbersString) return;
+    
+    // Extract all page numbers from the string
+    const pageNumbers = pageNumbersString
+      .split(',')
+      .map(page => page.trim())
+      .map(page => {
+        // Remove "Page " prefix if it exists
+        const number = page.replace('Page ', '').trim();
+        return parseInt(number);
+      })
+      .filter(num => !isNaN(num));
+
+    if (pageNumbers.length > 0) {
+      // Open PDF viewer with the first page
+      setSelectedPage(pageNumbers[0]);
+      setPdfViewerOpen(true);
+    }
+  };
+
+  const renderPageNumbers = (pageNumbersString: string | undefined) => {
+    if (!pageNumbersString) return null;
+
+    const pageNumbers = pageNumbersString
+      .split(',')
+      .map(page => page.trim());
+
+    return (
+      <div className="flex flex-wrap gap-1">
+        {pageNumbers.map((page, index) => (
+          <button
+            key={index}
+            onClick={() => handlePageClick(page.replace('Page ', '').trim())}
+            className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded"
+          >
+            <Link size={14} className="mr-1" />
+            <span>{page}</span>
+          </button>
+        ))}
+      </div>
+    );
   };
 
   // Update the renderTableOfContents function
