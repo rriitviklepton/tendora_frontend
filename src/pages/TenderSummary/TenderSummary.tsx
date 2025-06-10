@@ -988,6 +988,8 @@ const TenderSummary = () => {
   const [showPdf, setShowPdf] = useState(false);
   const [currentPdfPage, setCurrentPdfPage] = useState<number | null>(null);
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
+  const [selectedPage, setSelectedPage] = useState<number | null>(null);
+  const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
   const [activeEligibilityTab, setActiveEligibilityTab] = useState('legal');
   // Add this near the top of the component with other state declarations
   const [expandedTasks, setExpandedTasks] = useState<number[]>([]);
@@ -4822,17 +4824,7 @@ const TenderSummary = () => {
 
   const handleMultiplePagesClick = (pageNumbersString: string | undefined) => {
     if (!pageNumbersString) return;
-    
-    // Extract all page numbers from the string
-    const pageNumbers = pageNumbersString
-      .split(',')
-      .map(page => page.trim())
-      .map(page => {
-        // Remove "Page " prefix if it exists
-        const number = page.replace('Page ', '').trim();
-        return parseInt(number);
-      })
-      .filter(num => !isNaN(num));
+    const pageNumbers = pageNumbersString.split(',').map(num => parseInt(num.trim(), 10)).filter(num => !isNaN(num));
 
     if (pageNumbers.length > 0) {
       // Open PDF viewer with the first page
@@ -4843,25 +4835,28 @@ const TenderSummary = () => {
 
   const renderPageNumbers = (pageNumbersString: string | undefined) => {
     if (!pageNumbersString) return null;
+    const pageNumbers = pageNumbersString.split(',').map(num => parseInt(num.trim(), 10));
 
-    const pageNumbers = pageNumbersString
-      .split(',')
-      .map(page => page.trim());
-
-    return (
-      <div className="flex flex-wrap gap-1">
-        {pageNumbers.map((page, index) => (
-          <button
-            key={index}
-            onClick={() => handlePageClick(page.replace('Page ', '').trim())}
-            className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded"
-          >
-            <Link size={14} className="mr-1" />
-            <span>{page}</span>
-          </button>
-        ))}
-      </div>
-    );
+    if (pageNumbers.length === 1) {
+      return (
+        <span
+          className="text-blue-500 hover:underline cursor-pointer ml-2"
+          onClick={() => handlePageClick(pageNumbersString)}
+        >
+          (Page {pageNumbersString})
+        </span>
+      );
+    } else if (pageNumbers.length > 1) {
+      return (
+        <span
+          className="text-blue-500 hover:underline cursor-pointer ml-2"
+          onClick={() => handleMultiplePagesClick(pageNumbersString)}
+        >
+          (Pages {pageNumbersString})
+        </span>
+      );
+    }
+    return null;
   };
 
   // Update the renderTableOfContents function
@@ -5013,17 +5008,25 @@ const TenderSummary = () => {
   const renderHeaderButtons = () => (
     <div className="flex flex-col items-end space-y-2">
       {pdfUrl && (
-        <>
-          <button
-            onClick={() => setIsPdfModalOpen(true)}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors"
-          >
-            <Eye size={16} className="mr-2" />
-            View PDF
-          </button>
-        </>
+        <button
+          onClick={() => setPdfViewerOpen(true)}
+          className="inline-flex items-center px-6 py-2 border border-transparent text-base font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 shadow-sm transition-colors transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        >
+          <Eye size={20} className="mr-2" />
+          View PDF
+        </button>
       )}
-      {renderPortalLink(tenderSummaryData.portalLink)}
+      {tenderSummaryData.portalLink && (
+        <a
+          href={tenderSummaryData.portalLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center px-6 py-2 border border-transparent text-base font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 shadow-sm transition-colors transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        >
+          <Link size={20} className="mr-2" />
+          Portal Link
+        </a>
+      )}
     </div>
   );
 
@@ -5040,230 +5043,186 @@ const TenderSummary = () => {
   return (
     <div className="w-full">
       <div className="mb-6">
-      
-        
-        <div className="bg-white rounded-lg shadow-sm">
-          <div className="p-6 border-b border-gray-200">
-            <div className="flex justify-between items-start">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 mb-1">
-                  {originalTenderName}
-                </h1>
-                <h2 className="text-lg font-medium text-gray-600 mb-1">
-                  {tenderSummaryData.title}
-                </h2>
-                <div className="flex items-center text-gray-600 mb-3">
-                  <Building size={16} className="mr-1" />
-                  <span>{tenderSummaryData.issuingAuthority}</span>
-                </div>
-                
-                <div className="flex flex-wrap gap-2 mb-4">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    {tenderSummaryData.tenderNumber}
-                  </span>
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    {tenderSummaryData.tenderMode}
-                  </span>
-                </div>
-
-                {/* Financial Requirements Section */}
-                {tenderSummaryData?.financial_requirements && (
-                  <div className="mt-2 space-y-0 flex flex-row gap-2">
-                    {/* EMD Details */}
-                    {tenderSummaryData.financial_requirements?.emd && (
-                      <div className=" p-0 rounded-lg">
-                        <div className="flex items-center">
-                          <div className="flex items-center gap-3">
-                            <h3 className="text-base font-semibold text-gray-900">EMD Details</h3>
-                          </div>
-                          <button
-                            onClick={() => setIsEmdModalOpen(true)}
-                            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors flex items-center gap-2"
-                            title="View complete EMD details"
-                          >
-                            <Eye size={20} />
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Tender Fee Details */}
-                    {tenderSummaryData.financial_requirements?.tender_fee && (
-                      <div className=" p-0 rounded-lg">
-                        <div className="flex items-center">
-                          <div className="flex items-center gap-3">
-                            <h3 className="text-base font-semibold text-gray-900">Tender Fee Details</h3>
-                          </div>
-                          <button
-                            onClick={() => setIsTenderFeeModalOpen(true)}
-                            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors flex items-center gap-2"
-                            title="View complete tender fee details"
-                          >
-                            <Eye size={20} />
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Update the FinancialDetailsModal component to show all details in a better layout */}
-                    <FinancialDetailsModal
-                      isOpen={isEmdModalOpen}
-                      onClose={() => setIsEmdModalOpen(false)}
-                      title="EMD Details"
-                      details={{
-                        amount: tenderSummaryData.financial_requirements?.emd?.amount ?? null,
-                        payment_mode: tenderSummaryData.financial_requirements?.emd?.payment_mode ?? null,
-                        validity_period: tenderSummaryData.financial_requirements?.emd?.validity_period ?? null,
-                        exemptions: tenderSummaryData.financial_requirements?.emd?.exemptions ?? null,
-                        refund_terms: tenderSummaryData.financial_requirements?.emd?.refund_terms ?? null
-                      }}
-                    />
-
-                    <FinancialDetailsModal
-                      isOpen={isTenderFeeModalOpen}
-                      onClose={() => setIsTenderFeeModalOpen(false)}
-                      title="Tender Fee Details"
-                      details={{
-                        amount: tenderSummaryData.financial_requirements?.tender_fee?.amount ?? null,
-                        payment_mode: tenderSummaryData.financial_requirements?.tender_fee?.payment_mode ?? null,
-                        is_refundable: tenderSummaryData.financial_requirements?.tender_fee?.is_refundable ?? null,
-                        exemptions: tenderSummaryData.financial_requirements?.tender_fee?.exemptions ?? null
-                      }}
-                    />
-
-                    {/* Estimated Value */}
-                    {tenderSummaryData.financial_requirements?.estimated_value && (
-                      <div className="p-0 rounded-lg">
-                        <div className="flex items-center">
-                          <div className="flex items-center gap-3">
-                            <h3 className="text-base font-semibold text-gray-900">Estimated Value</h3>
-                          </div>
-                          <button
-                            className="p-1 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors flex items-center gap-2"
-                            title="View estimated value"
-                          >
-                            <span className="text-base text-gray-900">
-                              {tenderSummaryData.financial_requirements.estimated_value}
-                            </span>
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
+        <div className="bg-gradient-to-r from-blue-800 to-indigo-900  shadow-xl text-white p-6">
+          <div className="flex justify-between items-start">
+            <div className="flex-grow">
+              <h1 className="text-xl font-bold mb-2 leading-tight">
+                {originalTenderName}
+              </h1>
+              <h2 className="text-md text-blue-200 font-semibold opacity-90 mb-3">
+                {tenderSummaryData.title}
+              </h2>
+              <div className="flex items-center  text-sm mb-4">
+                <Building size={18} className="mr-2 opacity-80" />
+                <span>{tenderSummaryData.issuingAuthority}</span>
               </div>
-              
-              {renderHeaderButtons()}
+
+              <div className="flex flex-wrap gap-3 mb-5">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-600 text-white shadow-md">
+                  {tenderSummaryData.tenderNumber}
+                </span>
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-500 text-white shadow-md">
+                  {tenderSummaryData.tenderMode}
+                </span>
+              </div>
+
+              {/* Financial Requirements Section */}
+              {tenderSummaryData?.financial_requirements && (
+                <div className="mt-6 flex flex-row gap-4 items-stretch">
+                  {/* EMD Details */}
+                  {tenderSummaryData.financial_requirements?.emd && (
+                    <div className="flex-1 bg-white bg-opacity-10 p-4 rounded-lg flex flex-col justify-between border border-blue-700 shadow-inner">
+                      
+                      <button
+                        onClick={() => setIsEmdModalOpen(true)}
+                        className=" text-blue-300 hover:text-blue-100 flex items-center text-sm font-medium transition-colors"
+                        title="View complete EMD details"
+                      >
+                        EMD Details <ChevronRight size={16} className="ml-1" />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Tender Fee Details */}
+                  {tenderSummaryData.financial_requirements?.tender_fee && (
+                    <div className="flex-1 bg-white bg-opacity-10 p-4 rounded-lg flex flex-col justify-between border border-blue-700 shadow-inner">
+                      
+                      <button
+                        onClick={() => setIsTenderFeeModalOpen(true)}
+                        className=" text-blue-300 hover:text-blue-100 flex items-center text-sm font-medium transition-colors"
+                        title="View complete tender fee details"
+                      >
+                        Tender Fee Details <ChevronRight size={16} className="ml-1" />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Estimated Value - Placeholder/Example, if it exists */}
+                  {tenderSummaryData.financial_requirements?.estimated_value && (
+                    <div className="flex-1 bg-white bg-opacity-10 p-4 rounded-lg flex flex-col justify-between border border-blue-700 shadow-inner">
+                      <div>
+                        <h3 className="text-sm font-medium text-blue-200 mb-1">Estimated Value</h3>
+                        <p className="text-xl font-bold text-white">
+                          {formatCurrency(tenderSummaryData.financial_requirements.estimated_value)}
+                        </p>
+                      </div>
+                      {/* No specific modal for this in original, can add if needed */}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
+
+            {renderHeaderButtons()}
           </div>
-          
-          {/* Main content layout */}
-          <div className="flex">
-            {/* Left Navigation */}
-            <div className={`${isNavCollapsed ? 'w-16' : 'w-64'} flex-shrink-0 border-r border-gray-200 transition-all duration-300 ease-in-out relative`}>
-              {/* Collapse Toggle Button */}
-              <button
-                onClick={() => setIsNavCollapsed(!isNavCollapsed)}
-                className="absolute -right-3 top-4 bg-white border border-gray-200 rounded-full p-1.5 shadow-sm hover:bg-gray-50"
-              >
-                {isNavCollapsed ? (
-                  <ChevronRight size={16} className="text-gray-600" />
-                ) : (
-                  <ChevronLeft size={16} className="text-gray-600" />
-                )}
-              </button>
+        </div>
 
-              <nav className="py-4 pr-1">
-                <div className="space-y-1">
-                  {TABS.map(tab => {
-                    const isActive = activeTab === tab.id;
-                    const { status, hasData } = getSectionStatus(tab.id);
-                    const showReanalyzeButton = tab.id !== 'tender_summary' && tab.id !== 'submission' && tab.id !== 'evaluation' && tab.id !== 'table_of_contents' && tab.id !== 'conditions' && tab.id !== 'dates' && tab.id !== 'boq' && tab.id !== 'technical' && tab.id !== 'eligibility' && tab.id !== 'scope' && tab.id !== 'financial' && tab.id !== 'compliance';
-                    
-                    return (
-                      <div key={tab.id} className="mb-2 flex items-center">
-                        {/* Dislike button for completed sections - moved inside the main button for correct positioning */}
+        {/* Main content layout */}
+        <div className="flex">
+          {/* Left Navigation */}
+          <div className={`${isNavCollapsed ? 'w-16' : 'w-64'} flex-shrink-0 border-r border-gray-200 transition-all duration-300 ease-in-out relative`}>
+            {/* Collapse Toggle Button */}
+            <button
+              onClick={() => setIsNavCollapsed(!isNavCollapsed)}
+              className="absolute -right-3 top-4 bg-white border border-gray-200 rounded-full p-1.5 shadow-sm hover:bg-gray-50"
+            >
+              {isNavCollapsed ? (
+                <ChevronRight size={16} className="text-gray-600" />
+              ) : (
+                <ChevronLeft size={16} className="text-gray-600" />
+              )}
+            </button>
+
+            <nav className="py-4 pr-1">
+              <div className="space-y-1">
+                {TABS.map(tab => {
+                  const isActive = activeTab === tab.id;
+                  const { status, hasData } = getSectionStatus(tab.id);
+                  const showReanalyzeButton = tab.id !== 'tender_summary' && tab.id !== 'submission' && tab.id !== 'evaluation' && tab.id !== 'table_of_contents' && tab.id !== 'conditions' && tab.id !== 'dates' && tab.id !== 'boq' && tab.id !== 'technical' && tab.id !== 'eligibility' && tab.id !== 'scope' && tab.id !== 'financial' && tab.id !== 'compliance';
+
+                  return (
+                    <div key={tab.id} className="mb-2 flex items-center">
+                      {/* Dislike button for completed sections - moved inside the main button for correct positioning */}
+                      <button
+                        onClick={() => setActiveTab(tab.id)}
+                        className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                          isActive
+                            ? 'bg-blue-50 text-blue-700'
+                            : 'text-gray-700 hover:bg-gray-50'
+                        }`}
+                        title={isNavCollapsed ? tab.name : undefined}
+                      >
+                        <tab.icon size={18} className={`${isNavCollapsed ? '' : 'mr-2'} ${isActive ? 'text-blue-700' : 'text-gray-400'}`} />
+                        {!isNavCollapsed && <span>{tab.name}</span>}
+                        
+                        {/* Container for dislike button and status indicators */}
+                        {!isNavCollapsed && (
+                          <div className="ml-auto flex items-center">
+                            {status === 'success' && hasData && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation(); // Prevent tab change on dislike click
+                                  handleOpenFeedback(tab.name);
+                                }}
+                                className="p-1 rounded-full hover:bg-red-100 text-red-500"
+                                title={`Give feedback for ${tab.name}`}
+                              >
+                                <ThumbsDown size={16} />
+                              </button>
+                            )}
+
+                            {/* Status indicators */}
+                            {status === 'failed' && (
+                              <div className="p-1">
+                                <AlertTriangle size={16} className="text-amber-500" />
+                              </div>
+                            )}
+                            {status === 'success' && hasData && (
+                              <div className="p-1">
+                                <CheckCircle size={16} className="text-green-500" />
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </button>
+                      {/* Reanalyze button - only show when nav is expanded */}
+                      {!isNavCollapsed && showReanalyzeButton && (
                         <button
-                          onClick={() => setActiveTab(tab.id)}
-                          className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                            isActive
-                              ? 'bg-blue-50 text-blue-700'
-                              : 'text-gray-700 hover:bg-gray-50'
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSectionReanalysis(tab.id);
+                          }}
+                          disabled={reanalyzingSection !== null}
+                          className={`mt-1 ml-8 inline-flex items-center px-2 py-1 text-xs font-medium rounded ${
+                            reanalyzingSection === tab.id
+                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                              : 'text-blue-700 bg-blue-50 hover:bg-blue-100'
                           }`}
-                          title={isNavCollapsed ? tab.name : undefined}
                         >
-                          <tab.icon size={18} className={`${isNavCollapsed ? '' : 'mr-2'} ${isActive ? 'text-blue-700' : 'text-gray-400'}`} />
-                          {!isNavCollapsed && <span>{tab.name}</span>}
-                          
-                          {/* Container for dislike button and status indicators */}
-                          {!isNavCollapsed && (
-                            <div className="ml-auto flex items-center">
-                              {status === 'success' && hasData && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation(); // Prevent tab change on dislike click
-                                    handleOpenFeedback(tab.name);
-                                  }}
-                                  className="p-1 rounded-full hover:bg-red-100 text-red-500"
-                                  title={`Give feedback for ${tab.name}`}
-                                >
-                                  <ThumbsDown size={16} />
-                                </button>
-                              )}
-
-                              {/* Status indicators */}
-                              {status === 'failed' && (
-                                <div className="p-1">
-                                  <AlertTriangle size={16} className="text-amber-500" />
-                                </div>
-                              )}
-                              {status === 'success' && hasData && (
-                                <div className="p-1">
-                                  <CheckCircle size={16} className="text-green-500" />
-                                </div>
-                              )}
-                            </div>
+                          {reanalyzingSection === tab.id ? (
+                            <>
+                              <div className="animate-spin rounded-full h-3 w-3 border-2 border-blue-600 border-t-transparent mr-1" />
+                              <span>Analyzing...</span>
+                            </>
+                          ) : (
+                            <>
+                              <RefreshCw size={12} className="mr-1" />
+                              <span>Reanalyze</span>
+                            </>
                           )}
                         </button>
-                        {/* Reanalyze button - only show when nav is expanded */}
-                        {!isNavCollapsed && showReanalyzeButton && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleSectionReanalysis(tab.id);
-                            }}
-                            disabled={reanalyzingSection !== null}
-                            className={`mt-1 ml-8 inline-flex items-center px-2 py-1 text-xs font-medium rounded ${
-                              reanalyzingSection === tab.id
-                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                : 'text-blue-700 bg-blue-50 hover:bg-blue-100'
-                            }`}
-                          >
-                            {reanalyzingSection === tab.id ? (
-                              <>
-                                <div className="animate-spin rounded-full h-3 w-3 border-2 border-blue-600 border-t-transparent mr-1" />
-                                <span>Analyzing...</span>
-                              </>
-                            ) : (
-                              <>
-                                <RefreshCw size={12} className="mr-1" />
-                                <span>Reanalyze</span>
-                              </>
-                            )}
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </nav>
-            </div>
-
-            {/* Content Area */}
-            <div className="flex-1 overflow-hidden">
-              <div className="h-full overflow-auto p-6">
-                {renderActiveTabContent()}
+                      )}
+                    </div>
+                  );
+                })}
               </div>
+            </nav>
+          </div>
+
+          {/* Content Area */}
+          <div className="flex-1 overflow-hidden">
+            <div className="h-full overflow-auto p-6">
+              {renderActiveTabContent()}
             </div>
           </div>
         </div>
@@ -5305,6 +5264,43 @@ const TenderSummary = () => {
         preselectedSection={feedbackSection || undefined}
         preselectedSubsection={feedbackSubsection || undefined}
       />
+
+      {/* FinancialDetailsModal for EMD */}
+      <FinancialDetailsModal
+        isOpen={isEmdModalOpen}
+        onClose={() => setIsEmdModalOpen(false)}
+        title="EMD Details"
+        details={{
+          amount: tenderSummaryData.financial_requirements?.emd?.amount ?? null,
+          payment_mode: tenderSummaryData.financial_requirements?.emd?.payment_mode ?? null,
+          validity_period: tenderSummaryData.financial_requirements?.emd?.validity_period ?? null,
+          exemptions: tenderSummaryData.financial_requirements?.emd?.exemptions ?? null,
+          refund_terms: tenderSummaryData.financial_requirements?.emd?.refund_terms ?? null
+        }}
+      />
+
+      {/* FinancialDetailsModal for Tender Fee */}
+      <FinancialDetailsModal
+        isOpen={isTenderFeeModalOpen}
+        onClose={() => setIsTenderFeeModalOpen(false)}
+        title="Tender Fee Details"
+        details={{
+          amount: tenderSummaryData.financial_requirements?.tender_fee?.amount ?? null,
+          payment_mode: tenderSummaryData.financial_requirements?.tender_fee?.payment_mode ?? null,
+          is_refundable: tenderSummaryData.financial_requirements?.tender_fee?.is_refundable ?? null,
+          exemptions: tenderSummaryData.financial_requirements?.tender_fee?.exemptions ?? null
+        }}
+      />
+
+      {/* PDF Viewer Modal */}
+      {pdfUrl && (
+        <PDFViewerModal
+          isOpen={pdfViewerOpen}
+          onClose={() => setPdfViewerOpen(false)}
+          pdfUrl={pdfQuery.data || null}
+          initialPage={selectedPage}
+        />
+      )}
     </div>
   );
 };
