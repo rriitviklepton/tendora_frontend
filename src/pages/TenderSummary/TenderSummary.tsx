@@ -5247,8 +5247,8 @@ const TenderSummary = () => {
       <FeedbackForm
         isOpen={feedbackFormOpen}
         onClose={handleCloseFeedback}
-        tenderName={tenderSummaryQuery.data?.processed_section?.tenderSummary?.title || originalTenderName || 'N/A'}
-        tenderId={id ? parseInt(id) : 0} // Revert to using tenderIdNum from useParams
+        tenderName={tenderSummaryQuery.data?.tender_name || 'N/A'}
+        tenderId={tenderSummaryQuery.data?.tender_id}
         sectionOptions={TABS.map(tab => ({ id: tab.id, name: tab.name }))}
         showTenderFields={true}
         preselectedSection={feedbackSection || undefined}

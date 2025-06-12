@@ -28,11 +28,13 @@ const FeedbackButton: React.FC = () => {
   const isTenderRoute = Boolean(tenderRouteMatch);
   const tenderId = tenderRouteMatch ? tenderRouteMatch[1] : undefined;
 
-  // Get tender name from context if available
+  // Get tender name and ID from context if available
   let tenderName = '';
+  let tenderIdNum: number | undefined;
   if (isTenderRoute && tenderId) {
     const tender = getTenderById(tenderId);
     tenderName = tender?.title || '';
+    tenderIdNum = tender?.id ? parseInt(tender.id, 10) : undefined;
   }
 
   return (
@@ -49,6 +51,7 @@ const FeedbackButton: React.FC = () => {
         isOpen={isFormOpen}
         onClose={() => setIsFormOpen(false)}
         tenderName={isTenderRoute ? tenderName : undefined}
+        tenderId={isTenderRoute ? tenderIdNum : undefined}
         sectionOptions={isTenderRoute ? SECTION_OPTIONS : undefined}
         showTenderFields={isTenderRoute}
       />
