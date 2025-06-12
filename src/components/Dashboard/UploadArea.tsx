@@ -39,7 +39,8 @@ const UploadArea = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<UploadResponse | null>(null);
-  const [orgName, setOrgName] = useState('lepton');
+  const [orgName] = useState('lepton');
+  const [userName, setUserName] = useState('');
   const [ocrRequired, setOcrRequired] = useState(false);
   const [sectionStatus, setSectionStatus] = useState<SectionStatus | null>(null);
   const [statusInterval, setStatusInterval] = useState<number | null>(null);
@@ -67,6 +68,14 @@ const UploadArea = () => {
     e.preventDefault();
     setIsDragging(false);
     
+    if (!userName.trim()) {
+      setUploadStatus({
+        status: 'error',
+        message: 'Please enter your name before uploading a file.'
+      });
+      return;
+    }
+
     const files = e.dataTransfer.files;
     if (files.length > 0) {
       const file = files[0];
@@ -82,6 +91,14 @@ const UploadArea = () => {
   };
 
   const handleFileInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!userName.trim()) {
+      setUploadStatus({
+        status: 'error',
+        message: 'Please enter your name before selecting a file.'
+      });
+      return;
+    }
+
     const file = e.target.files?.[0];
     if (file) {
       await handleFileUpload(file);
@@ -89,10 +106,10 @@ const UploadArea = () => {
   };
   
   const handleFileUpload = async (file: File) => {
-    if (!orgName.trim()) {
+    if (!userName.trim()) {
       setUploadStatus({
         status: 'error',
-        message: 'Please enter an organization name'
+        message: 'Please enter your name'
       });
       return;
     }
@@ -107,6 +124,7 @@ const UploadArea = () => {
       const formData = new FormData();
       formData.append('pdf_file', file);
       formData.append('user_id', '123');
+      formData.append('user_name', userName.trim());
       formData.append('org_name', orgName.trim());
       formData.append('ocr_required', ocrRequired.toString());
       
@@ -290,9 +308,9 @@ const UploadArea = () => {
         }
         transition-colors duration-200
       `}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
+      onDragOver={userName.trim() ? handleDragOver : undefined}
+      onDragLeave={userName.trim() ? handleDragLeave : undefined}
+      onDrop={userName.trim() ? handleDrop : undefined}
     >
       {isUploading ? (
         <div className="flex flex-col items-center">
@@ -397,24 +415,37 @@ const UploadArea = () => {
           </div>
           <h3 className="text-lg font-medium text-gray-800 mb-1">Upload Tender Document</h3>
           
-          {/* Organization Input */}
-          <div className="mb-6">
-            <div className="flex flex-col items-center space-y-2">
-              <div className="flex items-center text-sm text-gray-700">
-                <Building size={16} className="mr-1" />
-                <span>Organization</span>
-              </div>
-              <input
-                type="text"
-                value={orgName}
-                onChange={(e) => setOrgName(e.target.value)}
-                placeholder="Enter Organization Name"
-                className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-400 focus:border-transparent bg-white text-gray-800"
-              />
+          {/* User Name Input */}
+          <div className="mb-6 flex items-center justify-center">
+            <div className="flex items-center text-sm text-gray-700 mr-2 w-32 justify-end">
+              <span>Your Name</span>
             </div>
+            <input
+              type="text"
+              value={userName}
+              onChange={(e) => setUserName(e.target.value)}
+              placeholder="Enter Your Name"
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-400 focus:border-transparent bg-white text-gray-800"
+              required
+            />
           </div>
-            {/* OCR Checkbox */}
-            <div className="mb-6">
+
+          {/* Organization Input */}
+          <div className="mb-6 flex items-center justify-center">
+            <div className="flex items-center text-sm text-gray-700 mr-2 w-32 justify-end">
+              <Building size={16} className="mr-1" />
+              <span>Organization</span>
+            </div>
+            <input
+              type="text"
+              value={orgName}
+              readOnly
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm bg-gray-100 text-gray-600 cursor-not-allowed"
+            />
+          </div>
+
+          {/* OCR Checkbox */}
+          <div className="mb-6">
             <label className="flex items-center justify-center space-x-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -437,14 +468,21 @@ const UploadArea = () => {
               PDF only
             </div>
           </div>
-          <label className="cursor-pointer">
+          <label 
+            className={`cursor-pointer ${!userName.trim() ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
             <input
               type="file"
               className="hidden"
               accept=".pdf"
               onChange={handleFileInputChange}
+              disabled={!userName.trim()}
             />
-            <span className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-sm transition-colors">
+            <span 
+              className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-500 shadow-sm transition-colors
+                ${userName.trim() ? 'hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500' : 'opacity-50 cursor-not-allowed'}
+              `}
+            >
               Select File
             </span>
           </label>
