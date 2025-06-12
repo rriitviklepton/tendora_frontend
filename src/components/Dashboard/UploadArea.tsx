@@ -8,12 +8,22 @@ interface Section {
   order: number;
 }
 
+interface StageStatus {
+  status: 'success';
+  tender_id: number;
+  tender_name: string;
+  stages: {
+    stage_1: 'success' | 'failed' | 'analyzing' | null;
+    stage_2: 'success' | 'failed' | 'analyzing' | null;
+  };
+}
+
 interface SectionStatus {
   status: 'success';
   tender_id: number;
   tender_name: string;
   sections: {
-    [key: string]: Section;
+    [key: string]: 'success' | 'failed' | 'analyzing' | null;
   };
   progress: {
     total: number;
@@ -44,6 +54,21 @@ const UploadArea = () => {
   const [ocrRequired, setOcrRequired] = useState(false);
   const [sectionStatus, setSectionStatus] = useState<SectionStatus | null>(null);
   const [statusInterval, setStatusInterval] = useState<number | null>(null);
+  const [stageStatus, setStageStatus] = useState<StageStatus | null>(null);
+
+  // Mapping for section names
+  const sectionNameMap: { [key: string]: string } = {
+    tender_summary: "Tender Summary",
+    table_of_contents: "Table of Contents",
+    scope_of_work: "Scope of Work",
+    evaluation_criteria: "Evaluation Criteria",
+    eligibility_conditions: "Eligibility Conditions",
+    compliance_requirements: "Compliance Requirements",
+    bill_of_quantities: "Bill of Quantities",
+    important_dates: "Important Dates",
+    annexures_attachments: "Annexures and Attachments",
+    // Add other sections as needed
+  };
 
   // Cleanup interval on unmount
   useEffect(() => {
@@ -235,52 +260,65 @@ const UploadArea = () => {
     console.log('fetchSectionStatus executing for tenderId:', tenderId);
     
     try {
-      const statusUrl = `https://api.smarttender.rio.software/api/section-status?tender_id=${tenderId}&user_id=123&org_name=${encodeURIComponent(orgName.trim())}`;
-      console.log('Making request to:', statusUrl);
+      // Fetch stage status first
+      const stageStatusUrl = `https://api.smarttender.rio.software/api/stage-status?tender_id=${tenderId}&user_id=123&org_name=${encodeURIComponent(orgName.trim())}`;
+      const stageResponse = await fetch(stageStatusUrl);
+      const stageData = await stageResponse.json();
       
-      const response = await fetch(statusUrl);
-      console.log('Got response:', response.status);
-      
-      const data = await response.json();
-      console.log('Received data:', data);
+      if (stageData && stageData.status === 'success') {
+        setStageStatus(stageData as StageStatus);
+        
+        // Only fetch section status if stage 2 is complete
+        if (stageData.stages.stage_2 === 'success') {
+          const statusUrl = `https://api.smarttender.rio.software/api/section-status?tender_id=${tenderId}&user_id=123&org_name=${encodeURIComponent(orgName.trim())}`;
+          console.log('Making request to:', statusUrl);
+          
+          const response = await fetch(statusUrl);
+          console.log('Got response:', response.status);
+          
+          const data = await response.json();
+          console.log('Received data:', data);
+          console.log('Sections data:', data.sections);
 
-      // Validate the data structure
-      if (!data || typeof data !== 'object') {
-        throw new Error('Invalid response format');
-      }
-
-      // Check required fields
-      if (!data.status || !data.tender_id || !data.tender_name || !data.sections || !data.progress) {
-        throw new Error('Missing required fields in response');
-      }
-
-      // Validate sections structure
-      if (typeof data.sections !== 'object') {
-        throw new Error('Invalid sections format');
-      }
-
-      // Validate progress structure
-      if (!data.progress.total || typeof data.progress.completion_percentage !== 'number') {
-        throw new Error('Invalid progress format');
-      }
-
-      setSectionStatus(data as SectionStatus);
-
-      if (data.sections) {
-        const isComplete = Object.values(data.sections).every(
-          (section: any) => section.status === 'success' || section.status === 'failed'
-        );
-
-        if (isComplete) {
-          console.log('Analysis complete');
-          setIsAnalyzing(false);
-          if (statusInterval) {
-            window.clearInterval(statusInterval);
-            setStatusInterval(null);
+          // Validate the data structure
+          if (!data || typeof data !== 'object') {
+            throw new Error('Invalid response format');
           }
-          navigate(`/tender/${tenderId}`, {
-            state: { org_name: orgName.trim() }
-          });
+
+          // Check required fields
+          if (!data.status || !data.tender_id || !data.tender_name || !data.sections || !data.progress) {
+            throw new Error('Missing required fields in response');
+          }
+
+          // Validate sections structure
+          if (typeof data.sections !== 'object') {
+            throw new Error('Invalid sections format');
+          }
+
+          // Validate progress structure
+          if (!data.progress.total || typeof data.progress.completion_percentage !== 'number') {
+            throw new Error('Invalid progress format');
+          }
+
+          setSectionStatus(data as SectionStatus);
+
+          if (data.sections) {
+            const isComplete = Object.values(data.sections).every(
+              (section: any) => section.status === 'success' || section.status === 'failed'
+            );
+
+            if (isComplete) {
+              console.log('Analysis complete');
+              setIsAnalyzing(false);
+              if (statusInterval) {
+                window.clearInterval(statusInterval);
+                setStatusInterval(null);
+              }
+              navigate(`/tender/${tenderId}`, {
+                state: { org_name: orgName.trim() }
+              });
+            }
+          }
         }
       }
     } catch (error) {
@@ -288,7 +326,7 @@ const UploadArea = () => {
       // Set error state
       setUploadStatus({
         status: 'error',
-        message: error instanceof Error ? error.message : 'Failed to fetch section status'
+        message: error instanceof Error ? error.message : 'Failed to fetch status'
       });
       setIsAnalyzing(false);
       if (statusInterval) {
@@ -323,69 +361,165 @@ const UploadArea = () => {
           </div>
         </div>
       ) : isAnalyzing ? (
-        sectionStatus ? (
-          <div className="flex flex-col items-center w-full max-w-2xl mx-auto">
-            <Loader size={40} className="text-blue-500 animate-spin mb-3" />
-            <p className="text-sm text-gray-700 mb-2">
-              Analyzing tender document... ({sectionStatus.progress.completion_percentage.toFixed(1)}% complete)
-            </p>
-            {sectionStatus.sections['tender_summary']?.status === 'success' && (
-              <button
-                onClick={() => navigate(`/tender/${sectionStatus.tender_id}`, {
-                  state: { org_name: orgName.trim() }
-                })}
-                className="mx-4 px-4 py-2 mb-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors flex items-center gap-2"
-              >
-                <span>View Tender</span>
-                <ArrowRight size={16} />
-              </button>
-            )}
-            
+        <div className="flex flex-col items-center w-full max-w-2xl mx-auto">
+          <Loader size={40} className="text-blue-500 animate-spin mb-3" />
+
+          {/* Stage Status Display - Always show stages 1 and 2 */}
+          {stageStatus ? (
+            <div className="w-full mb-4 space-y-3">
+              <div className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium text-gray-700">Stage 1: Document Evaluation</span>
+                  {stageStatus.stages.stage_1 === null ? (
+                    <span className="text-xs text-gray-500">Waiting to break down tender into smaller pieces</span>
+                  ) : stageStatus.stages.stage_1 === 'analyzing' ? (
+                    <span className="text-xs text-blue-500">Breaking down tender into smaller pieces...</span>
+                  ) : stageStatus.stages.stage_1 === 'success' ? (
+                    <span className="text-xs text-gray-500">Tender broken down into smaller pieces</span>
+                  ) : (
+                    <span className="text-xs text-red-500">Failed to break down tender into smaller pieces</span>
+                  )}
+                </div>
+                <div className="flex items-center">
+                  {stageStatus.stages.stage_1 === null || stageStatus.stages.stage_1 === 'analyzing' ? (
+                    <div className="flex items-center text-blue-500">
+                      <span className="text-xs mr-2">Processing</span>
+                      <Loader size={16} className="animate-spin" />
+                    </div>
+                  ) : stageStatus.stages.stage_1 === 'success' ? (
+                    <div className="flex items-center text-green-500">
+                      <span className="text-xs mr-2">Complete</span>
+                      <CheckCircle size={16} />
+                    </div>
+                  ) : (
+                    <div className="flex items-center text-red-500">
+                      <span className="text-xs mr-2">Failed</span>
+                      <XCircle size={16} />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Stage 2: Content Analysis - Only show if Stage 1 is complete */}
+              {stageStatus.stages.stage_1 === 'success' && (
+                <div className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-gray-700">Stage 2: Content Analysis</span>
+                    {stageStatus.stages.stage_2 === null ? (
+                      <span className="text-xs text-gray-500">Waiting to identify and categorize information </span>
+                    ) : stageStatus.stages.stage_2 === 'analyzing' ? (
+                      <span className="text-xs text-blue-500">Identifying and categorizing information...</span>
+                    ) : stageStatus.stages.stage_2 === 'success' ? (
+                      <span className="text-xs text-gray-500">Information categorized into relevant sections</span>
+                    ) : (
+                      <span className="text-xs text-red-500">Failed to categorize information into relevant sections</span>
+                    )}
+                  </div>
+                  <div className="flex items-center">
+                    {stageStatus.stages.stage_2 === null || stageStatus.stages.stage_2 === 'analyzing' ? (
+                      <div className="flex items-center text-blue-500">
+                        <span className="text-xs mr-2">Processing</span>
+                        <Loader size={16} className="animate-spin" />
+                      </div>
+                    ) : stageStatus.stages.stage_2 === 'success' ? (
+                      <div className="flex items-center text-green-500">
+                        <span className="text-xs mr-2">Complete</span>
+                        <CheckCircle size={16} />
+                      </div>
+                    ) : (
+                      <div className="flex items-center text-red-500">
+                        <span className="text-xs mr-2">Failed</span>
+                        <XCircle size={16} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Stage 3: Section Status - Only show if stage 2 is complete */}
+              {stageStatus.stages.stage_2 === 'success' && sectionStatus && (
+                <div className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-gray-700">Stage 3: Final Processing</span>
+                    <span className="text-xs text-gray-500">Converting analyzed data into human-readable format</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="flex items-center text-blue-500">
+                      <span className="text-xs mr-2">
+                        {sectionStatus.progress.completion_percentage.toFixed(1)}% Complete
+                      </span>
+                      <Loader size={16} className="animate-spin" />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-700 mb-2">Initializing analysis...</p>
+          )}
+
+          {/* Section Status Details - Only show if stage 2 is complete */}
+          {stageStatus?.stages.stage_2 === 'success' && sectionStatus && (
             <div className="w-full space-y-2">
+              <p className="text-sm text-gray-600 mb-2">Processing individual sections:</p>
               {Object.entries(sectionStatus.sections)
-                .sort((a, b) => a[1].order - b[1].order)
-                .map(([key, section]) => (
+                .map(([key, sectionStatusValue]) => (
                   <div key={key} className="flex items-center justify-between p-2 bg-white rounded-lg shadow-sm">
-                    <span className="text-sm text-gray-700">{section.name}</span>
+                    <span className="text-sm text-gray-700">{sectionNameMap[key] || key}</span>
                     <div className="flex items-center">
-                      {section.status === 'analyzing' && (
-                        <Loader size={16} className="text-blue-500 animate-spin" />
-                      )}
-                      {section.status === 'success' && (
-                        <CheckCircle size={16} className="text-green-500" />
-                      )}
-                      {section.status === 'failed' && (
-                        <XCircle size={16} className="text-red-500" />
-                      )}
-                      {section.status === null && (
-                        <div className="w-4 h-4 rounded-full bg-gray-300" />
+                      {sectionStatusValue === 'analyzing' ? (
+                        <div className="flex items-center text-blue-500">
+                          <span className="text-xs mr-2">Processing</span>
+                          <Loader size={16} className="animate-spin" />
+                        </div>
+                      ) : sectionStatusValue === 'success' ? (
+                        <div className="flex items-center text-green-500">
+                          <span className="text-xs mr-2">Complete</span>
+                          <CheckCircle size={16} />
+                        </div>
+                      ) : sectionStatusValue === 'failed' ? (
+                        <div className="flex items-center text-red-500">
+                          <span className="text-xs mr-2">Failed</span>
+                          <XCircle size={16} />
+                        </div>
+                      ) : (
+                        <div className="flex items-center text-gray-500">
+                          <span className="text-xs mr-2">Pending</span>
+                          <div className="w-4 h-4 rounded-full bg-gray-300" />
+                        </div>
                       )}
                     </div>
                   </div>
                 ))}
             </div>
-            
-            <div className="w-full mt-4 bg-blue-100 rounded-full h-2 overflow-hidden">
-              <div 
-                className="h-full bg-blue-500 transition-all duration-500"
-                style={{ width: `${sectionStatus.progress.completion_percentage}%` }}
-              />
-            </div>
-            
-            <p className="text-xs text-gray-600 mt-2">
-              {sectionStatus.progress.completed} of {sectionStatus.progress.total} sections completed
-              {sectionStatus.progress.failed > 0 && ` (${sectionStatus.progress.failed} failed)`}
-            </p>
+          )}
+          
+          <div className="w-full mt-4 bg-blue-100 rounded-full h-2 overflow-hidden">
+            <div 
+              className="h-full bg-blue-500 transition-all duration-500"
+              style={{ width: `${sectionStatus?.progress.completion_percentage || 0}%` }}
+            />
           </div>
-        ) : (
-          <div className="flex flex-col items-center">
-            <Loader size={40} className="text-blue-500 animate-spin mb-3" />
-            <p className="text-sm text-gray-700 mb-1">
-              Starting analysis...
-            </p>
-            <p className="text-xs text-gray-500 mt-2">This may take a few minutes</p>
-          </div>
-        )
+          
+          <p className="text-xs text-gray-600 mt-2">
+            {sectionStatus ? 
+              `${sectionStatus.progress.completed} of ${sectionStatus.progress.total} sections completed` +
+              (sectionStatus.progress.failed > 0 ? ` (${sectionStatus.progress.failed} failed)` : '')
+              : ''}
+          </p>
+
+          {sectionStatus?.sections?.tender_summary === 'success' && (
+            <button
+              onClick={() => navigate(`/tender/${sectionStatus.tender_id}`, {
+                state: { org_name: orgName.trim() }
+              })}
+              className="mx-4 px-4 py-2 mb-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors flex items-center gap-2"
+            >
+              <span>View Tender</span>
+              <ArrowRight size={16} />
+            </button>
+          )}
+        </div>
       ) : uploadStatus ? (
         <div className="flex flex-col items-center">
           {uploadStatus.status === 'success' ? (

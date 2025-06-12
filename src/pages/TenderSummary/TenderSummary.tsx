@@ -743,7 +743,7 @@ const isSectionAccessible = (
   if (!sectionStatus?.sections) return false;
   
   const section = sectionStatus.sections[sectionApiMapping[sectionId]];
-  return section?.status === 'success';
+  return section === 'success' || section === 'analyzing';
 };
 
 // Add helper function to get section state
@@ -755,7 +755,7 @@ const getSectionState = (
   if (!sectionStatus?.sections) return null;
   
   const section = sectionStatus.sections[sectionApiMapping[sectionId]];
-  return section?.status as SectionState;
+  return section as SectionState;
 };
 
 // Add PDFViewerModal component before TenderSummary component
@@ -4805,7 +4805,7 @@ const TenderSummary = () => {
   // Update the tab click handler
   const handleTabClick = (tabId: string) => {
     const sectionState = getSectionState(tabId, sectionStatus, sectionApiMapping);
-    if (sectionState !== 'success') {
+    if (sectionState !== 'success' && sectionState !== 'analyzing') {
       // Don't switch tabs if section is not ready
       return;
     }
