@@ -743,7 +743,7 @@ const isSectionAccessible = (
   if (!sectionStatus?.sections) return false;
   
   const section = sectionStatus.sections[sectionApiMapping[sectionId]];
-  return section === 'success' || section === 'analyzing';
+  return section === 'success';
 };
 
 // Add helper function to get section state
