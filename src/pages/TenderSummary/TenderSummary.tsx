@@ -1267,9 +1267,7 @@ const TenderSummary = () => {
         setOriginalTenderName(data.tender_name);
         
         // Check if any section needs polling (is analyzing or null)
-        const needsPolling = Object.values(data.sections).some(
-          (section: any) => section.status === 'analyzing' || section.status === null
-        );
+        const needsPolling = Object.values(data.sections).includes("analyzing")
         setIsPolling(needsPolling);
       } catch (error) {
         console.error('Error fetching section status:', error);
