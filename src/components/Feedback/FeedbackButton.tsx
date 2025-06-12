@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
 import FeedbackForm from './FeedbackForm';
 import { useTenderContext } from '../../context/TenderContext';
@@ -19,6 +19,7 @@ const SECTION_OPTIONS = [
 
 const FeedbackButton: React.FC = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [tenderInfo, setTenderInfo] = useState<{ name: string; id: number | undefined }>({ name: '', id: undefined });
   const location = useLocation();
   const params = useParams();
   const { getTenderById } = useTenderContext();
@@ -29,13 +30,17 @@ const FeedbackButton: React.FC = () => {
   const tenderId = tenderRouteMatch ? tenderRouteMatch[1] : undefined;
 
   // Get tender name and ID from context if available
-  let tenderName = '';
-  let tenderIdNum: number | undefined;
-  if (isTenderRoute && tenderId) {
-    const tender = getTenderById(tenderId);
-    tenderName = tender?.title || '';
-    tenderIdNum = tender?.id ? parseInt(tender.id, 10) : undefined;
-  }
+  useEffect(() => {
+    if (isTenderRoute && tenderId) {
+      const tender = getTenderById(tenderId);
+      if (tender) {
+        setTenderInfo({
+          name: tender.title || '',
+          id: tender.id ? parseInt(tender.id, 10) : undefined
+        });
+      }
+    }
+  }, [isTenderRoute, tenderId, getTenderById]);
 
   return (
     <>
@@ -50,8 +55,8 @@ const FeedbackButton: React.FC = () => {
       <FeedbackForm
         isOpen={isFormOpen}
         onClose={() => setIsFormOpen(false)}
-        tenderName={isTenderRoute ? tenderName : undefined}
-        tenderId={isTenderRoute ? tenderIdNum : undefined}
+        tenderName={isTenderRoute ? tenderInfo.name : undefined}
+        tenderId={isTenderRoute ? tenderInfo.id : undefined}
         sectionOptions={isTenderRoute ? SECTION_OPTIONS : undefined}
         showTenderFields={isTenderRoute}
       />
