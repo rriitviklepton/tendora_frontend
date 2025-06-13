@@ -12,6 +12,7 @@
   "dependencies": {
     "@nivo/bar": "^0.85.1",
     "@nivo/core": "^0.85.1",
+    "antd":"^5.26.0",
     "@nivo/line": "^0.85.1",
     "@nivo/pie": "^0.85.1",
     "@react-pdf-viewer/core": "^3.12.0",
