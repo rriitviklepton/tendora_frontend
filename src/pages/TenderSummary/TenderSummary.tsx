@@ -53,6 +53,9 @@ import StatusBadge from '../../components/UI/StatusBadge';
 import { getTimeRemaining, formatCurrency } from '../../utils/helpers';
 import PDFViewer from '../../components/PDFViewer/PDFViewer';
 import FeedbackForm from '../../components/Feedback/FeedbackForm';
+import CorrigendumsButton from '../../components/Corrigendums/CorrigendumsButton';
+import { useDeleteCorrigendum } from '../../hooks/useDeleteCorrigendum';
+import { useUploadCorrigendum } from '../../hooks/useUploadCorrigendum';
 
 declare global {
   interface Window {
@@ -1006,6 +1009,21 @@ const TenderSummary = () => {
   }; // Close and reset feedback form states
 
   const tenderIdNum = id ? parseInt(id, 10) : undefined; // Convert id to number
+
+  const deleteCorrigendumMutation = useDeleteCorrigendum();
+  const uploadCorrigendumMutation = useUploadCorrigendum();
+
+  const handleDeleteCorrigendum = (corrigendumId: number) => {
+    if (tenderIdNum) {
+      deleteCorrigendumMutation.mutate({ corrigendumId, tenderId: tenderIdNum });
+    }
+  };
+
+  const handleUploadCorrigendum = (file: File) => {
+    if (tenderIdNum) {
+      uploadCorrigendumMutation.mutate({ tenderId: tenderIdNum, file });
+    }
+  };
 
   // Add useEffect for initial tab selection
   useEffect(() => {
@@ -5015,6 +5033,17 @@ const TenderSummary = () => {
         </button>
       )}
       {renderPortalLink(tenderSummaryData.portalLink)}
+      <CorrigendumsButton
+        tenderId={Number(id)}
+        onUpload={handleUploadCorrigendum}
+        onDelete={handleDeleteCorrigendum}
+        onView={(fileUrl) => {
+          // Implement view logic
+          console.log('View corrigendum:', fileUrl);
+        }}
+        isDeletingCorrigendum={deleteCorrigendumMutation.isPending}
+        isUploadingCorrigendum={uploadCorrigendumMutation.isPending}
+      />
     </div>
   );
 
