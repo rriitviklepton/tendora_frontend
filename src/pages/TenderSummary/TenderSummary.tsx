@@ -5005,6 +5005,7 @@ const TenderSummary = () => {
                             className="inline-flex items-center text-sm text-blue-600 hover:text-blue-800 cursor-pointer"
                           >
                             <Link size={14} className="mr-1" />
+                            
                             <span>Page {subsection.page_number}</span>
                           </button>
                         )}
