@@ -5052,7 +5052,17 @@ const TenderSummary = () => {
   const handleOpenFeedback = (sectionName: string, subsectionName: string | null = null) => {
     console.log('Opening feedback form for section:', sectionName, 'subsection:', subsectionName);
     console.log('tenderSummaryQuery.data:', tenderSummaryQuery.data);
-    setFeedbackSection(sectionName);
+    
+    let adjustedSectionName = sectionName;
+    if (sectionName === 'Compliance') {
+      adjustedSectionName = 'Compliance Requirements';
+    } else if (sectionName === 'Key Dates') {
+      adjustedSectionName = 'Important Dates';
+    } else if (sectionName === 'Submission') {
+      adjustedSectionName = 'Submission Requirements';
+    }
+
+    setFeedbackSection(adjustedSectionName);
     setFeedbackSubsection(subsectionName);
     setFeedbackFormOpen(true);
   };
@@ -5180,6 +5190,7 @@ const TenderSummary = () => {
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation(); // Prevent tab change on dislike click
+                                  console.log(tab.name)
                                   handleOpenFeedback(tab.name);
                                 }}
                                 className="p-1 rounded-full hover:bg-red-100 text-red-500"
@@ -5277,7 +5288,17 @@ const TenderSummary = () => {
         onClose={handleCloseFeedback}
         tenderName={tenderSummaryQuery.data?.tender_name || 'N/A'}
         tenderId={tenderSummaryQuery.data?.tender_id}
-        sectionOptions={TABS.map(tab => ({ id: tab.id, name: tab.name }))}
+        sectionOptions={TABS.map(tab => {
+          let tabName = tab.name;
+          if (tab.id === 'compliance') {
+            tabName = 'Compliance Requirements';
+          } else if (tab.id === 'dates') {
+            tabName = 'Important Dates';
+          } else if (tab.id === 'submission') {
+            tabName = 'Submission Requirements';
+          }
+          return { id: tab.id, name: tabName };
+        })}
         showTenderFields={true}
         preselectedSection={feedbackSection || undefined}
         preselectedSubsection={feedbackSubsection || undefined}
