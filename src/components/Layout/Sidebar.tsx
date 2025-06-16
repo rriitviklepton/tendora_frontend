@@ -58,6 +58,7 @@ const Sidebar = ({ open, setOpen }: SidebarProps) => {
               <Link
                 key={item.name}
                 to={item.href}
+                onClick={() => setOpen(false)}
                 className={`group flex items-center px-3 py-2 rounded-md transition-colors ${
                   isActive
                     ? 'bg-blue-800 text-white'
