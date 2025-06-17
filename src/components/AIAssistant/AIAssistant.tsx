@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 import { 
   X, 
   SendHorizontal, 
@@ -7,7 +9,8 @@ import {
   ChevronLeft, 
   ChevronRight, 
   Loader2,
-  AlertTriangle 
+  AlertTriangle,
+  GripVertical
 } from 'lucide-react';
 
 // Add animation styles
@@ -50,6 +53,38 @@ const animationStyles = `
 
   .pulse-animation {
     animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  /* Resize handle styles */
+  .resize-handle {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    cursor: col-resize;
+    background-color: transparent;
+    transition: background-color 0.2s;
+  }
+
+  .resize-handle:hover,
+  .resize-handle.active {
+    background-color: #2563eb;
+  }
+
+  .resize-handle-icon {
+    position: absolute;
+    left: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #2563eb;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .resize-handle:hover .resize-handle-icon,
+  .resize-handle.active .resize-handle-icon {
+    opacity: 1;
   }
 
   /* Markdown styles */
@@ -111,6 +146,47 @@ const animationStyles = `
     margin: 0.5rem 0;
     color: #4b5563;
   }
+
+  /* Table styles */
+  .markdown-content table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1rem 0;
+    font-size: 0.875rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    overflow: hidden;
+  }
+
+  .markdown-content thead {
+    background-color: #f3f4f6;
+  }
+
+  .markdown-content th {
+    padding: 0.75rem;
+    text-align: left;
+    font-weight: 600;
+    color: #374151;
+    border-bottom: 2px solid #e5e7eb;
+  }
+
+  .markdown-content td {
+    padding: 0.75rem;
+    border-bottom: 1px solid #e5e7eb;
+    color: #4b5563;
+  }
+
+  .markdown-content tr:last-child td {
+    border-bottom: none;
+  }
+
+  .markdown-content tr:nth-child(even) {
+    background-color: #f9fafb;
+  }
+
+  .markdown-content tr:hover {
+    background-color: #f3f4f6;
+  }
 `;
 
 // Simple function to generate a unique ID
@@ -147,6 +223,10 @@ interface AIAssistantProps {
 
 const AIAssistant = ({ open, setOpen }: AIAssistantProps) => {
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(384); // Default width (96 * 4)
+  const [isResizing, setIsResizing] = useState(false);
+  const startXRef = useRef<number>(0);
+  const startWidthRef = useRef<number>(0);
   const [sessions, setSessions] = useState<Session[]>([{
     id: generateId(),
     number: 1,
@@ -471,13 +551,59 @@ const AIAssistant = ({ open, setOpen }: AIAssistantProps) => {
     }
   }, [sessions[currentSessionIndex].messages]);
 
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsResizing(true);
+    startXRef.current = e.clientX;
+    startWidthRef.current = width;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  };
+
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!isResizing) return;
+
+    const deltaX = startXRef.current - e.clientX;
+    const newWidth = Math.min(Math.max(startWidthRef.current + deltaX, 320), 800); // Min 320px, max 800px
+    setWidth(newWidth);
+  };
+
+  const handleMouseUp = () => {
+    setIsResizing(false);
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  };
+
+  useEffect(() => {
+    if (isResizing) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
+
   return (
     <div
-      className={`fixed inset-y-0 right-0 z-40 w-96 bg-white shadow-lg transform transition-transform duration-300 ease-in-out ${
+      className={`fixed inset-y-0 right-0 z-40 bg-white shadow-lg transform transition-transform duration-300 ease-in-out ${
         open ? 'translate-x-0' : 'translate-x-full'
       }`}
+      style={{ width: `${width}px` }}
     >
       <style>{animationStyles}</style>
+      
+      {/* Resize handle */}
+      <div
+        className={`resize-handle ${isResizing ? 'active' : ''}`}
+        onMouseDown={handleMouseDown}
+      >
+        <div className="resize-handle-icon">
+          <GripVertical size={16} />
+        </div>
+      </div>
+
       {/* Header */}
       <div className="flex flex-col px-4 py-3 border-b border-gray-200 bg-white">
         <div className="flex items-center justify-between mb-2">
@@ -580,7 +706,13 @@ const AIAssistant = ({ open, setOpen }: AIAssistantProps) => {
                   </div>
                 ) : message.isBot ? (
                   <div className="markdown-content">
-                    <ReactMarkdown>{message.text}</ReactMarkdown>
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      rehypePlugins={[rehypeRaw]}
+                      remarkRehypeOptions={{ passThrough: ['link'] }}
+                    >
+                      {message.text}
+                    </ReactMarkdown>
                   </div>
                 ) : (
                   <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.text}</p>
