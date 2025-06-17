@@ -181,7 +181,7 @@ type TableOfContentsData = TableOfContentsSection[];
 // Custom hooks for section data
 const useSectionDetails = (tenderId: string, sectionName: string, orgName?: string, enabled: boolean = true) => {
   return useQuery<SectionResponse>({
-    queryKey: ['tender', tenderId, 'section', sectionName, { orgName }],
+    queryKey: ['tender', tenderId, 'section', sectionName,  orgName ],
     queryFn: async () => {
       const url = new URL('https://api.smarttender.rio.software/api/section-details');
       url.searchParams.append('tender_id', tenderId);

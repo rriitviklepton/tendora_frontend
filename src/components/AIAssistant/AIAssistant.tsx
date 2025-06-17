@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { 
   X, 
   SendHorizontal, 
@@ -22,8 +23,93 @@ const animationStyles = `
     }
   }
 
+  @keyframes typing {
+    0% { content: '.'; }
+    33% { content: '..'; }
+    66% { content: '...'; }
+    100% { content: '.'; }
+  }
+
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+  }
+
   .animate-fade-in {
     animation: fadeIn 0.3s ease-out forwards;
+  }
+
+  .typing-indicator::after {
+    content: '.';
+    animation: typing 1.5s infinite;
+    display: inline-block;
+    width: 1em;
+    text-align: left;
+  }
+
+  .pulse-animation {
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  /* Markdown styles */
+  .markdown-content {
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+
+  .markdown-content h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 1rem 0;
+  }
+
+  .markdown-content h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0.875rem 0;
+  }
+
+  .markdown-content h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 0.75rem 0;
+  }
+
+  .markdown-content ul, .markdown-content ol {
+    margin: 0.5rem 0;
+    padding-left: 1.5rem;
+  }
+
+  .markdown-content li {
+    margin: 0.25rem 0;
+  }
+
+  .markdown-content a {
+    color: #2563eb;
+    text-decoration: underline;
+  }
+
+  .markdown-content code {
+    background-color: #f3f4f6;
+    padding: 0.2rem 0.4rem;
+    border-radius: 0.25rem;
+    font-family: monospace;
+  }
+
+  .markdown-content pre {
+    background-color: #f3f4f6;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    margin: 0.5rem 0;
+  }
+
+  .markdown-content blockquote {
+    border-left: 4px solid #e5e7eb;
+    padding-left: 1rem;
+    margin: 0.5rem 0;
+    color: #4b5563;
   }
 `;
 
@@ -484,9 +570,17 @@ const AIAssistant = ({ open, setOpen }: AIAssistantProps) => {
                 }`}
               >
                 {message.isLoading ? (
-                  <div className="flex items-center space-x-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Thinking...</span>
+                  <div className="flex items-center space-x-3 bg-gray-50 p-3 rounded-lg">
+                    <div className="flex space-x-1">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full pulse-animation" style={{ animationDelay: '0ms' }}></div>
+                      <div className="w-2 h-2 bg-blue-500 rounded-full pulse-animation" style={{ animationDelay: '150ms' }}></div>
+                      <div className="w-2 h-2 bg-blue-500 rounded-full pulse-animation" style={{ animationDelay: '300ms' }}></div>
+                    </div>
+                    <span className="text-sm text-gray-600 typing-indicator">Thinking</span>
+                  </div>
+                ) : message.isBot ? (
+                  <div className="markdown-content">
+                    <ReactMarkdown>{message.text}</ReactMarkdown>
                   </div>
                 ) : (
                   <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.text}</p>

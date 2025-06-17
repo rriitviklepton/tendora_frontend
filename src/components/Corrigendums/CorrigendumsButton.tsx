@@ -45,6 +45,8 @@ const CorrigendumsButton: React.FC<CorrigendumsButtonProps> = ({
         isLoading={isLoading}
         isDeletingCorrigendum={isDeletingCorrigendum}
         isUploadingCorrigendum={isUploadingCorrigendum}
+        userId={123}
+        orgName="lepton"
       />
     </>
   );
