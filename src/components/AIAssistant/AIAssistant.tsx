@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
+import PDFViewer from '../PDFViewer/PDFViewer';
 import { 
   X, 
   SendHorizontal, 
@@ -10,7 +11,8 @@ import {
   ChevronRight, 
   Loader2,
   AlertTriangle,
-  GripVertical
+  GripVertical,
+  FileText
 } from 'lucide-react';
 
 // Add animation styles
@@ -198,6 +200,10 @@ interface Message {
   text: string;
   isBot: boolean;
   isLoading?: boolean;
+  references?: {
+    pages: number[];
+    pdfUrl?: string;
+  };
 }
 
 interface Session {
@@ -214,6 +220,7 @@ interface TenderInfo {
   reference_no: string;
   tender_info?: any;
   org_name?: string;
+  document_url?: string;
 }
 
 interface AIAssistantProps {
@@ -241,6 +248,9 @@ const AIAssistant = ({ open, setOpen }: AIAssistantProps) => {
   const [tenders, setTenders] = useState<TenderInfo[]>([]);
   const [selectedTenderId, setSelectedTenderId] = useState<number | undefined>();
   const [isFetchingTender, setIsFetchingTender] = useState(false);
+  const [showPdfViewer, setShowPdfViewer] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string>('');
+  const [initialPage, setInitialPage] = useState<number | null>(null);
 
   const currentSession = sessions[currentSessionIndex];
 
@@ -285,7 +295,8 @@ const AIAssistant = ({ open, setOpen }: AIAssistantProps) => {
             title: data.tender.tender_name,
             reference_no: data.tender.tender_id.toString(),
             tender_info: data.tender.tender_info,
-            org_name: data.tender.org_name || "lepton"
+            org_name: data.tender.org_name || "lepton",
+            document_url: `https://hlxdpsexbmfffxjycobl.supabase.co/storage/v1/object/public/tendors/${data.tender.org_name || "lepton"}/123/${data.tender.tender_id}/${data.tender.tender_id}_${encodeURIComponent(data.tender.tender_name)}.pdf`
           };
           // Update the current session with tender info
           const updatedSessions = [...sessions];
@@ -422,6 +433,33 @@ const AIAssistant = ({ open, setOpen }: AIAssistantProps) => {
     };
   }, [currentSession?.id]);
 
+  // Function to parse references from text
+  const parseReferences = (text: string) => {
+    const referenceMatch = text.match(/\[References - Page (\d+(?:-\d+)?(?:,\s*\d+(?:-\d+)?)*)\]/);
+    if (referenceMatch) {
+      const pagesStr = referenceMatch[1];
+      const pages = pagesStr.split(/[,-]/).map(page => parseInt(page.trim()));
+      return pages;
+    }
+    return null;
+  };
+
+  // Function to handle message updates with references
+  const updateMessageWithReferences = (message: Message) => {
+    const pages = parseReferences(message.text);
+    if (pages) {
+      return {
+        ...message,
+        references: {
+          pages,
+          pdfUrl: currentSession.tenderInfo?.document_url
+        }
+      };
+    }
+    return message;
+  };
+
+  // Modify the sendMessage function to handle references
   const sendMessage = async (text: string) => {
     if (!text.trim() || !currentSession.tenderId) return;
     
@@ -466,9 +504,9 @@ const AIAssistant = ({ open, setOpen }: AIAssistantProps) => {
         throw new Error('No response body received');
       }
 
+      let fullResponse = "";
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      let fullResponse = "";
 
       const scrollToBottom = () => {
         if (chatContainerRef.current) {
@@ -498,10 +536,21 @@ const AIAssistant = ({ open, setOpen }: AIAssistantProps) => {
           // Update the last message with the accumulated response
           const newSessions = [...sessions];
           const currentMessages = newSessions[currentSessionIndex].messages;
-          currentMessages[currentMessages.length - 1] = { text: fullResponse, isBot: true, isLoading: false };
+          const updatedMessage = updateMessageWithReferences({ 
+            text: fullResponse, 
+            isBot: true, 
+            isLoading: false 
+          });
+          currentMessages[currentMessages.length - 1] = updatedMessage;
           setSessions(newSessions);
           
-          // Scroll to bottom after each chunk
+          // Check for references and show PDF viewer if needed
+          if (updatedMessage.references) {
+            setPdfUrl(updatedMessage.references.pdfUrl || '');
+            setInitialPage(updatedMessage.references.pages[0]);
+            setShowPdfViewer(true);
+          }
+          
           scrollToBottom();
         }
       } catch (streamError) {
@@ -713,6 +762,21 @@ const AIAssistant = ({ open, setOpen }: AIAssistantProps) => {
                     >
                       {message.text}
                     </ReactMarkdown>
+                    {message.references && (
+                      <div className="mt-2 flex items-center gap-2 text-sm text-blue-600">
+                        <FileText size={16} />
+                        <button
+                          onClick={() => {
+                            setPdfUrl(message.references?.pdfUrl || '');
+                            setInitialPage(message.references?.pages[0] || null);
+                            setShowPdfViewer(true);
+                          }}
+                          className="hover:underline"
+                        >
+                          View referenced pages ({message.references.pages.join(', ')})
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.text}</p>
@@ -721,6 +785,24 @@ const AIAssistant = ({ open, setOpen }: AIAssistantProps) => {
             </div>
           ))}
         </div>
+        
+        {/* PDF Viewer */}
+        {showPdfViewer && pdfUrl && (
+          <div className="h-1/2 border-t border-gray-200">
+            <div className="flex items-center justify-between p-2 bg-gray-50 border-b border-gray-200">
+              <h3 className="text-sm font-medium text-gray-700">Referenced Pages</h3>
+              <button
+                onClick={() => setShowPdfViewer(false)}
+                className="p-1 hover:bg-gray-200 rounded"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="h-[calc(100%-40px)]">
+              <PDFViewer pdfUrl={pdfUrl} initialPage={initialPage} />
+            </div>
+          </div>
+        )}
         
         {/* Input area */}
         <div className="p-3 border-t border-gray-200 bg-white">
