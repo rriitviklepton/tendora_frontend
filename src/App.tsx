@@ -12,6 +12,7 @@ import Submission from './pages/Submission/Submission';
 import Analytics from './pages/Analytics/Analytics';
 import OCRConvert from './pages/OCRConvert';
 import { TenderProvider } from './context/TenderContext';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 
 // Create a client with better caching configuration
 const queryClient = new QueryClient({
@@ -48,6 +49,7 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
+    {/* <ReactQueryDevtools/> */}
       <TenderProvider>
         <Router>
           <Routes>

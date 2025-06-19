@@ -182,6 +182,9 @@ type TableOfContentsData = TableOfContentsSection[];
 const useSectionDetails = (tenderId: string, sectionName: string, orgName?: string, enabled: boolean = true) => {
   return useQuery<SectionResponse>({
     queryKey: ['tender', tenderId, 'section', sectionName,  orgName ],
+    // Debug: log the query parameters
+    // eslint-disable-next-line no-console
+    ...(console.log('useSectionDetails queryKey:', { tenderId, sectionName, orgName }), {}),
     queryFn: async () => {
       const url = new URL('https://api.smarttender.rio.software/api/section-details');
       url.searchParams.append('tender_id', tenderId);

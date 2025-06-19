@@ -102,6 +102,7 @@ const CorrigendumsModal: React.FC<CorrigendumsModalProps> = ({
               queryKey,
               refetchType: 'all'
             });
+            console.log('Invalidated section:', update.section);
           }
         });
       } else {
